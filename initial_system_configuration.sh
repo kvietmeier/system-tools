@@ -1,6 +1,28 @@
 #!/bin/bash
-# Run as root
+# ==================================================================================================
+# Copyright (c) 2025 Karl Vietmeier. All rights reserved.
+# Licensed under the MIT License. See LICENSE file in the project root for details.
+# This script is provided "as is", without warranty of any kind, express or implied.
+# ==================================================================================================
+# Description:
+#   This script configures a fresh Linux system with:
+#     - Logging setup for cloud-init and runtime output
+#     - User and directory setup (creates labuser, home dirs, sudo rights)
+#     - Common shell aliases for root and labuser
+#     - Package installation (development tools, libraries, docker, nfs, etc.)
+#     - Chrony configuration with cloud-aware time sources
+#     - Compilation and installation of performance tools:
+#         FIO, DOOL, iPerf, SockPerf, Elbencho (with S3 support)
+#     - Completion logging for automation pipelines
+# ==================================================================================================
 
+### Safety valves
+set -euo pipefail  # Exit on errors, unset variables, and pipe failures
+
+
+###====================================================================================###
+### Logging
+###====================================================================================###
 exec > >(tee -a /tmp/compiletools-out.log) 2>&1
 echo "compiletools_full.sh started at $(date)"
 
@@ -12,11 +34,20 @@ log_and_continue() {
     fi
 }
 
+###====================================================================================###
+### User and Directory Setup
+###====================================================================================###
 # -------------------------------
 # Ensure labuser exists
 # -------------------------------
 if ! id -u labuser >/dev/null 2>&1; then
-    useradd -m -s /bin/bash -G sudo labuser
+    if [ -f /etc/debian_version ]; then
+        useradd -m -s /bin/bash -G sudo labuser
+    elif [ -f /etc/redhat-release ]; then
+        useradd -m -s /bin/bash -G wheel labuser
+    else
+        useradd -m -s /bin/bash labuser
+    fi
     echo "labuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/labuser
 fi
 
@@ -25,10 +56,11 @@ mkdir -p "$LABUSER_HOME/output"
 mkdir -p "$LABUSER_HOME/git"
 chown -R labuser:labuser "$LABUSER_HOME"
 
+
 # -------------------------------
-# Labuser bashrc
+# Common aliases
 # -------------------------------
-cat <<'EOF' >> "$LABUSER_HOME/.bashrc"
+ALIASES=$(cat <<'EOF'
 alias la="ls -Av"
 alias ls="ls -hF --color=auto"
 alias l="ls -CFv"
@@ -44,28 +76,24 @@ alias du='du -h'
 set -o vi
 bind 'set bell-style none'
 EOF
+)
+
+# -------------------------------
+# Apply aliases to labuser
+# -------------------------------
+echo "$ALIASES" >> "$LABUSER_HOME/.bashrc"
 chown labuser:labuser "$LABUSER_HOME/.bashrc"
 chmod 644 "$LABUSER_HOME/.bashrc"
 
 # -------------------------------
-# Root bashrc
+# Apply aliases to root
 # -------------------------------
-cat <<'EOF' >> /root/.bashrc
-alias ls="ls -hFv --color=auto"
-alias l="ls -CFv"
-alias la="ls -Av"
-alias ll='ls -lhvF --group-directories-first'
-alias lla='ls -alhvF --group-directories-first'
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias grep='grep --color=auto'
-alias cdb='cd -'
-alias cdu='cd ..'
-alias df='df -kh'
-alias du='du -h'
-set -o vi
-bind 'set bell-style none'
-EOF
+echo "$ALIASES" >> /root/.bashrc
+chmod 644 /root/.bashrc
+
+###====================================================================================###
+### Package Installation
+###====================================================================================###
 
 # -------------------------------
 # OS detection & packages
@@ -73,11 +101,30 @@ EOF
 if [ -f /etc/debian_version ]; then
     DEBIAN_FRONTEND=noninteractive apt-get update -y
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        build-essential debhelper libboost-dev libboost-program-options-dev \
-        libboost-system-dev libboost-thread-dev libssl-dev libncurses-dev \
-        libnuma-dev libaio-dev librdmacm1 bpfcc-tools man-db chrony dnsutils \
-        docker nfs-common cmake dkms autoconf libcurl4-openssl-dev uuid-dev \
-        zlib1g-dev
+        build-essential \
+        debhelper \
+        libboost-dev \
+        libboost-program-options-dev \
+        libboost-system-dev \
+        libboost-thread-dev \
+        libssl-dev \
+        libncurses-dev \
+        libnuma-dev \
+        libaio-dev \
+        librdmacm1 \
+        bpfcc-tools \
+        man-db \
+        chrony \
+        dnsutils \
+        docker.io \
+        nfs-common \
+        cmake \
+        dkms \
+        autoconf \
+        libcurl4-openssl-dev \
+        uuid-dev \
+        zlib1g-dev \
+        git
 
     # Disable unattended-upgrades
     echo 'APT::Periodic::Update-Package-Lists "0";' > /etc/apt/apt.conf.d/20auto-upgrades
@@ -90,16 +137,49 @@ if [ -f /etc/debian_version ]; then
 
 elif [ -f /etc/redhat-release ]; then
     dnf groupinstall -y "Development Tools"
-    dnf install -y epel-release numactl-devel libaio-devel boost-devel \
-        boost-program-options boost-system boost-thread ncurses-devel \
-        openssl-devel docker bcc-tools man-db chrony bind-utils nfs-utils \
-        cmake rdma-core libcurl-devel libuuid-devel zlib zlib-devel libarchive
+    dnf install -y \
+        epel-release \
+        numactl-devel \
+        libaio-devel \
+        boost-devel \
+        boost-program-options \
+        boost-system \
+        boost-thread \
+        ncurses-devel \
+        openssl-devel \
+        bcc-tools \
+        man-db \
+        chrony \
+        bind-utils \
+        nfs-utils \
+        cmake \
+        rdma-core \
+        libcurl-devel \
+        libuuid-devel \
+        zlib \
+        zlib-devel \
+        libarchive \
+        git \
+        docker || echo "⚠️ Docker may require docker-ce repo on CentOS/RHEL"
 fi
+
+###====================================================================================###
+### Chrony Configuration
+###====================================================================================###
 
 # -------------------------------
 # Chrony cloud-agnostic
 # -------------------------------
-CHRONY_CONF="/etc/chrony/chrony.conf"
+### Chrony configuration file location
+if [ -f /etc/debian_version ]; then
+    CHRONY_CONF="/etc/chrony/chrony.conf"
+elif [ -f /etc/redhat-release ]; then
+    CHRONY_CONF="/etc/chrony.conf"
+else
+    CHRONY_CONF="/etc/chrony/chrony.conf"
+fi
+
+### Cloud Time Keepers
 if curl -s --connect-timeout 1 http://169.254.169.254/latest/meta-data/ >/dev/null 2>&1; then
     echo "server 169.254.169.123 prefer iburst" > $CHRONY_CONF
 elif curl -s --connect-timeout 1 -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/ >/dev/null 2>&1; then
@@ -110,6 +190,7 @@ else
     echo "pool pool.ntp.org iburst" > $CHRONY_CONF
 fi
 
+### Common Chrony settings
 cat <<EOF >> $CHRONY_CONF
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
@@ -120,6 +201,7 @@ bindcmdaddress 127.0.0.1
 bindcmdaddress ::1
 EOF
 
+### Enable and start chrony service
 if [ -f /etc/debian_version ]; then
     systemctl enable chrony
     systemctl restart chrony
@@ -127,6 +209,10 @@ elif [ -f /etc/redhat-release ]; then
     systemctl enable chronyd
     systemctl restart chronyd
 fi
+
+###====================================================================================###
+### Compile and Install Performance Tools
+###====================================================================================###
 
 # -------------------------------
 # Compile tools (FIO, DOOL, iPerf, SockPerf, Elbencho)
@@ -179,4 +265,8 @@ elif [ -f /etc/debian_version ]; then
 fi
 cd /root
 
+
+###====================================================================================###
+### Completion Log
+###====================================================================================###
 echo "compiletools_full.sh completed at $(date)" >> /tmp/cloud-init-out.txt
