@@ -57,8 +57,7 @@ mkdir -p "$LABUSER_HOME/git"
 chown -R labuser:labuser "$LABUSER_HOME"
 
 
-# -------------------------------
-# Common aliases
+# -------------------------------# Common aliases
 # -------------------------------
 ALIASES=$(cat <<'EOF'
 alias la="ls -Av"
