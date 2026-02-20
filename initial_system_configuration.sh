@@ -217,7 +217,7 @@ fi
 # Compile tools (FIO, DOOL, iPerf, SockPerf, Elbencho)
 # -------------------------------
 cd /root
-mkdir -p .local/bin
+mkdir git
 cd git
 
 # DOOL
