@@ -7,66 +7,84 @@
 # Description:
 #   This script configures a fresh Linux system with:
 #     - Logging setup for cloud-init and runtime output
+#     - Disabling OS/Kernel auto-upgrades for environment stability
 #     - User and directory setup (creates labuser, home dirs, sudo rights)
 #     - Common shell aliases for root and labuser
 #     - Package installation (development tools, libraries, docker, nfs, etc.)
 #     - Chrony configuration with cloud-aware time sources
-#     - Compilation and installation of performance tools:
-#         FIO, DOOL, iPerf, SockPerf, Elbencho (with S3 support)
-#     - Completion logging for automation pipelines
+#     - Compilation and installation of performance tools (idempotent builds)
 # ==================================================================================================
 
 ### Safety valves
-set -euo pipefail  # Exit on errors, unset variables, and pipe failures
-
+set -euo pipefail
 
 ###====================================================================================###
-### Logging
+### 1. Logging & System Lock Waiter
 ###====================================================================================###
 exec > >(tee -a /tmp/compiletools-out.log) 2>&1
 echo "compiletools_full.sh started at $(date)"
 
 LOG_FILE="/tmp/cloud-init-out.txt"
-log_and_continue() {
-    echo "$1" >> "$LOG_FILE"
-    if [ $? -ne 0 ]; then
-        echo "Warning: $1 failed!" >> "$LOG_FILE"
-    fi
+
+wait_for_locks() {
+    echo "Checking for system locks..."
+    while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/dnf/metadata_lock.pid >/dev/null 2>&1; do
+        sleep 5
+    done
+    while [ -f /etc/passwd.lock ] || [ -f /etc/group.lock ] || [ -f /etc/ptmp ] || [ -f /etc/gtmp ]; do
+        sleep 2
+    done
 }
 
 ###====================================================================================###
-### User and Directory Setup
+### 2. Disable OS Auto-Upgrades & Firewalls
 ###====================================================================================###
-# -------------------------------
-# Ensure labuser exists
-# -------------------------------
+echo ">>> [SYSTEM] Disabling auto-upgrades and firewalls..."
+
+if [ -f /etc/debian_version ]; then
+    # Disable Ubuntu Unattended Upgrades
+    echo 'APT::Periodic::Update-Package-Lists "0";' > /etc/apt/apt.conf.d/20auto-upgrades
+    echo 'APT::Periodic::Unattended-Upgrade "0";' >> /etc/apt/apt.conf.d/20auto-upgrades
+    systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer || true
+    systemctl disable unattended-upgrades apt-daily.timer apt-daily-upgrade.timer || true
+    systemctl mask unattended-upgrades apt-daily.service apt-daily-upgrade.service || true
+    
+    # Firewall
+    ufw disable || true
+
+elif [ -f /etc/redhat-release ]; then
+    # Disable DNF Automatic upgrades
+    systemctl stop dnf-automatic.timer || true
+    systemctl disable dnf-automatic.timer || true
+    
+    # Firewall
+    systemctl stop firewalld nftables || true
+    systemctl disable firewalld nftables || true
+fi
+
+###====================================================================================###
+### 3. User and Directory Setup
+###====================================================================================###
+wait_for_locks
 if ! id -u labuser >/dev/null 2>&1; then
     if [ -f /etc/debian_version ]; then
         useradd -m -s /bin/bash -G sudo labuser
     elif [ -f /etc/redhat-release ]; then
         useradd -m -s /bin/bash -G wheel labuser
-    else
-        useradd -m -s /bin/bash labuser
     fi
     echo "labuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/labuser
 fi
 
 LABUSER_HOME="/home/labuser"
-mkdir -p "$LABUSER_HOME/output"
-mkdir -p "$LABUSER_HOME/git"
+mkdir -p "$LABUSER_HOME/output" "$LABUSER_HOME/git" "/root/git"
 chown -R labuser:labuser "$LABUSER_HOME"
 
-
-# -------------------------------# Common aliases
-# -------------------------------
 ALIASES=$(cat <<'EOF'
 alias la="ls -Av"
-alias ls="ls -hF --color=auto"
 alias l="ls -CFv"
 alias ll='ls -lhvF --group-directories-first'
 alias lla='ls -alhvF --group-directories-first'
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
+alias ls="ls -hF --color=auto"
 alias grep='grep --color=auto'
 alias cdb='cd -'
 alias cdu='cd ..'
@@ -76,196 +94,84 @@ set -o vi
 bind 'set bell-style none'
 EOF
 )
-
-# -------------------------------
-# Apply aliases to labuser
-# -------------------------------
 echo "$ALIASES" >> "$LABUSER_HOME/.bashrc"
-chown labuser:labuser "$LABUSER_HOME/.bashrc"
-chmod 644 "$LABUSER_HOME/.bashrc"
-
-# -------------------------------
-# Apply aliases to root
-# -------------------------------
 echo "$ALIASES" >> /root/.bashrc
-chmod 644 /root/.bashrc
 
 ###====================================================================================###
-### Package Installation
+### 4. Package Installation
 ###====================================================================================###
-
-# -------------------------------
-# OS detection & packages
-# -------------------------------
+wait_for_locks
 if [ -f /etc/debian_version ]; then
     DEBIAN_FRONTEND=noninteractive apt-get update -y
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        build-essential \
-        debhelper \
-        libboost-dev \
-        libboost-program-options-dev \
-        libboost-system-dev \
-        libboost-thread-dev \
-        libssl-dev \
-        libncurses-dev \
-        libnuma-dev \
-        libaio-dev \
-        librdmacm1 \
-        bpfcc-tools \
-        man-db \
-        chrony \
-        dnsutils \
-        docker.io \
-        nfs-common \
-        cmake \
-        dkms \
-        autoconf \
-        libcurl4-openssl-dev \
-        uuid-dev \
-        zlib1g-dev \
-        git
-
-    # Disable unattended-upgrades
-    echo 'APT::Periodic::Update-Package-Lists "0";' > /etc/apt/apt.conf.d/20auto-upgrades
-    echo 'APT::Periodic::Unattended-Upgrade "0";' >> /etc/apt/apt.conf.d/20auto-upgrades
-    systemctl stop unattended-upgrades || true
-    systemctl disable unattended-upgrades || true
-    systemctl stop apt-daily.timer apt-daily-upgrade.timer || true
-    systemctl disable apt-daily.timer apt-daily-upgrade.timer || true
-    systemctl mask apt-daily.service apt-daily-upgrade.service || true
-
+        build-essential libboost-dev libssl-dev libncurses-dev libnuma-dev \
+        libaio-dev librdmacm1 cmake autoconf libcurl4-openssl-dev uuid-dev \
+        zlib1g-dev git python3-dev libarchive-dev chrony
 elif [ -f /etc/redhat-release ]; then
     dnf groupinstall -y "Development Tools"
-    dnf install -y \
-        epel-release \
-        numactl-devel \
-        libaio-devel \
-        boost-devel \
-        boost-program-options \
-        boost-system \
-        boost-thread \
-        ncurses-devel \
-        openssl-devel \
-        bcc-tools \
-        man-db \
-        chrony \
-        bind-utils \
-        nfs-utils \
-        cmake \
-        rdma-core \
-        libcurl-devel \
-        libuuid-devel \
-        zlib \
-        zlib-devel \
-        libarchive \
-        git \
-        docker || echo "⚠️ Docker may require docker-ce repo on CentOS/RHEL"
+    dnf install -y epel-release
+    dnf install -y numactl-devel libaio-devel boost-devel ncurses-devel \
+        openssl-devel cmake rdma-core libcurl-devel libuuid-devel \
+        zlib zlib-devel git python3-devel libarchive-devel chrony
 fi
 
 ###====================================================================================###
-### Chrony Configuration
+### 5. Chrony Configuration (OCI-Aware)
 ###====================================================================================###
+[ -f /etc/debian_version ] && CHRONY_CONF="/etc/chrony/chrony.conf" || CHRONY_CONF="/etc/chrony.conf"
 
-# -------------------------------
-# Chrony cloud-agnostic
-# -------------------------------
-### Chrony configuration file location
-if [ -f /etc/debian_version ]; then
-    CHRONY_CONF="/etc/chrony/chrony.conf"
-elif [ -f /etc/redhat-release ]; then
-    CHRONY_CONF="/etc/chrony.conf"
-else
-    CHRONY_CONF="/etc/chrony/chrony.conf"
-fi
-
-### Cloud Time Keepers
-if curl -s --connect-timeout 1 http://169.254.169.254/latest/meta-data/ >/dev/null 2>&1; then
+if curl -s --connect-timeout 1 http://169.254.169.254/opc/v1/instance/ >/dev/null 2>&1; then
+    echo "server 169.254.169.254 iburst" > $CHRONY_CONF
+elif curl -s --connect-timeout 1 http://169.254.169.254/latest/meta-data/ >/dev/null 2>&1; then
     echo "server 169.254.169.123 prefer iburst" > $CHRONY_CONF
-elif curl -s --connect-timeout 1 -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/ >/dev/null 2>&1; then
-    echo "server metadata.google.internal iburst" > $CHRONY_CONF
-elif curl -s --connect-timeout 1 http://169.254.169.254/metadata/instance?api-version=2021-02-01 -H "Metadata:true" >/dev/null 2>&1; then
-    echo "server time.windows.com iburst" > $CHRONY_CONF
 else
     echo "pool pool.ntp.org iburst" > $CHRONY_CONF
 fi
 
-### Common Chrony settings
 cat <<EOF >> $CHRONY_CONF
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
-logdir /var/log/chrony
-allow 0.0.0.0/0
-bindcmdaddress 127.0.0.1
-bindcmdaddress ::1
 EOF
-
-### Enable and start chrony service
-if [ -f /etc/debian_version ]; then
-    systemctl enable chrony
-    systemctl restart chrony
-elif [ -f /etc/redhat-release ]; then
-    systemctl enable chronyd
-    systemctl restart chronyd
-fi
+systemctl enable --now chronyd || systemctl enable --now chrony
 
 ###====================================================================================###
-### Compile and Install Performance Tools
+### 6. Performance Tools (Idempotent)
 ###====================================================================================###
+_smart_build() {
+    local url=$1 dir=$2 cmd=$3
+    cd /root/git
+    if [ -d "$dir" ]; then
+        echo ">>> [SKIP] $dir exists."
+    else
+        echo ">>> [BUILD] $dir..."
+        git clone "$url" "$dir"
+        cd "$dir"
+        if eval "$cmd"; then
+            echo ">>> [SUCCESS] $dir installed."
+        else
+            echo "!!! [FAIL] $dir failed. Cleaning up."
+            cd /root/git && rm -rf "$dir"
+            return 1
+        fi
+    fi
+}
 
-# -------------------------------
-# Compile tools (FIO, DOOL, iPerf, SockPerf, Elbencho)
-# -------------------------------
-cd /root
-mkdir git
-cd git
+_smart_build "https://github.com/scottchiefbaker/dool.git" "dool" "./install.py"
+_smart_build "https://github.com/axboe/fio.git" "fio" "./configure && make -j$(nproc) && make install"
+_smart_build "https://github.com/esnet/iperf.git" "iperf" "./configure && make -j$(nproc) && make install && echo '/usr/local/lib' > /etc/ld.so.conf.d/iperf.conf && ldconfig"
+_smart_build "https://github.com/mellanox/sockperf" "sockperf" "./autogen.sh && ./configure && make -j$(nproc) && make install"
 
-# DOOL
-git clone https://github.com/scottchiefbaker/dool.git
-cd dool
-./install.py
-cd ..
-
-# FIO
-git clone https://github.com/axboe/fio.git
-cd fio
-./configure
-make
-make install
-cd ..
-
-# iPerf
-git clone https://github.com/esnet/iperf.git
-cd iperf
-./configure
-make
-make install
-cd ..
-echo "/usr/local/lib" > /etc/ld.so.conf.d/iperf.conf
-ldconfig
-
-# SockPerf
-git clone https://github.com/mellanox/sockperf
-cd sockperf
-./autogen.sh
-./configure
-make
-make install
-cd ..
-
-# Elbencho with S3 support
-git clone https://github.com/breuner/elbencho.git
-cd elbencho
-make S3_SUPPORT=1 -j "$(nproc)"
+# Elbencho (Rocky 9 Fix)
 if [ -f /etc/redhat-release ]; then
-    make rpm && dnf install -y ./packaging/RPMS/x86_64/elbencho*.rpm
-elif [ -f /etc/debian_version ]; then
-    make install
+    EL_CMD="find . -name 'CMakeCache.txt' -delete && \
+            find . -name 'CMakeFiles' -type d -exec rm -rf {} + && \
+            export OPENSSL_ROOT_DIR=/usr && export OPENSSL_LIBRARIES=/usr/lib64 && export OPENSSL_INCLUDE_DIR=/usr/include && \
+            make S3_SUPPORT=1 -j $(nproc) && \
+            make rpm && dnf install -y ./packaging/RPMS/x86_64/elbencho*.rpm"
+else
+    EL_CMD="make S3_SUPPORT=1 -j $(nproc) && make install"
 fi
-cd /root
+_smart_build "https://github.com/breuner/elbencho.git" "elbencho" "$EL_CMD"
 
-
-###====================================================================================###
-### Completion Log
-###====================================================================================###
-echo "compiletools_full.sh completed at $(date)" >> /tmp/cloud-init-out.txt
+echo "compiletools_full.sh completed at $(date)" >> "$LOG_FILE"
