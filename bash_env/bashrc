@@ -1,0 +1,23 @@
+# Exit if not running interactively
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# Source global definitions
+[ -f /etc/bashrc ] && . /etc/bashrc
+
+# Load modular configs from ~/.bashrc.d
+if [ -d ~/.bashrc.d ]; then
+    for rc in ~/.bashrc.d/*; do
+        [ -f "$rc" ] && . "$rc"
+    done
+fi
+unset rc
+
+# Optional local overrides
+[ -f ~/.bashrc.local ] && . ~/.bashrc.local
+
+export PATH=/home/karlv/bin:$PATH
+
+[[ -e "/home/karlv/lib/oracle-cli/lib/python3.12/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/home/karlv/lib/oracle-cli/lib/python3.12/site-packages/oci_cli/bin/oci_autocomplete.sh"

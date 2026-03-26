@@ -1,0 +1,11 @@
+[user]
+	name = 
+	email = 
+[core]
+	editor = vim
+	autocrlf = input
+	eol = lf
+[init]
+	defaultBranch = main
+[credential]
+	helper = store

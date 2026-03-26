@@ -1,0 +1,77 @@
+# Ubuntu/WSL2 dircolors - consistent colors with sticky/other highlighted
+
+# TERM entries
+TERM xterm*
+TERM screen*
+TERM tmux*
+TERM linux
+TERM cygwin
+TERM st
+TERM rxvt*
+TERM putty
+TERM konsole
+TERM gnome
+TERM vt100
+
+# Reset / normal
+RESET 0
+NORMAL 00
+
+# Directories
+DIR 34                       # regular directories - plain blue
+STICKY 33;01                 # sticky directories (like /tmp) - bold yellow/orange
+OTHER_WRITABLE 31;01         # world-writable directories - bold red
+STICKY_OTHER_WRITABLE 31;01  # sticky & world-writable - bold red
+
+# Symlinks
+LINK 36
+ORPHAN 01;31
+MISSING 00
+
+# Executable files
+EXEC 01;32
+SETUID 37;41
+SETGID 30;43
+CAPABILITY 30;41
+
+# Pipes, sockets, block/char devices
+FIFO 40;33
+SOCK 01;35
+BLK 40;33;01
+CHR 40;33;01
+
+# Archives / compressed
+.tar 31
+.tgz 31
+.zip 31
+.gz 31
+.bz2 31
+.xz 31
+.rar 31
+.7z 31
+.deb 01;31
+.rpm 01;31
+.jar 01;31
+.war 01;31
+
+# Images
+.jpg 35
+.jpeg 35
+.png 35
+.gif 35
+.bmp 35
+.tiff 35
+.svg 35
+
+# Audio
+.mp3 00;36
+.wav 00;36
+.flac 00;36
+.aac 00;36
+.m4a 00;36
+
+# Text files, scripts, etc.
+#.sh 01;32
+.py 01;32
+.pl 01;32
+.rb 01;32
