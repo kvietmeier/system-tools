@@ -7,6 +7,12 @@ The tarball bashsetup.tar contains my personal Bash environment setup for WSL an
   * Works seamlessly with cloud providers (AWS, GCP, Azure) and Terraform workflows.
   * Includes light and dark terminal color schemes.
 
+This will create a prompt that identifies where the host you are logged into is running:
+```shell
+karlv@ghostcanyon [WSL] :~$
+karlv@devops01 [GCP] :~$
+```
+<br>
 ---
 ### Files
 ---
