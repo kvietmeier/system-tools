@@ -6,6 +6,7 @@ The tarball bashsetup.tar contains my personal Bash environment setup for WSL an
   * Modular .bashrc.d/ directory makes it easy to extend and maintain functions.
   * Works seamlessly with cloud providers (AWS, GCP, Azure) and Terraform workflows.
   * Includes light and dark terminal color schemes.
+  * Has settings for .ssh/config for lab use.
   * You get a prompt that identifies where the host you are logged into is running:
     ```shell
     karlv@ghostcanyon [WSL] :~$
