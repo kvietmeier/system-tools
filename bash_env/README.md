@@ -12,10 +12,13 @@ This will create a prompt that identifies where the host you are logged into is 
 karlv@ghostcanyon [WSL] :~$
 karlv@devops01 [GCP] :~$
 ```
+
 <br>
+
 ---
 ### Files
 ---
+
 ```text
 bashsetup.tar
 │
