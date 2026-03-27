@@ -35,7 +35,9 @@ bashsetup.tar
    └─ 20-set-aliases.sh            # Command aliases
 ```
 
+---
 ### How it works - 
+---
 
 ```text
 ┌─────────────┐
