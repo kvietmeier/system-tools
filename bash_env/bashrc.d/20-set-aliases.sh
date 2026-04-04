@@ -17,7 +17,10 @@ load_aliases() {
       "$(history | tail -n1 | sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
     # --- Refresh .bashrc
-    alias refresh=". ${HOME}/.bashrc"
+    alias dotbash=". ${HOME}/.bashrc"
+    
+    # --- List functions
+    alias shwf="declare -F"
 
     # --- Smarter ls commands
     alias ls='ls -hF --color=auto'
@@ -78,6 +81,9 @@ load_aliases() {
         alias pgpsecrets="${HOME}/Terraform/scripts/vast.extracts3secret.sh"
         alias vmsstat="${HOME}/bin/vms.status.py"
     fi
+    
+    # Utlities for getting public IP
+    alias myip=get_my_ip
 
     # --- AWS aliases if AWS CLI exists
     if command -v aws >/dev/null 2>&1; then
@@ -86,17 +92,20 @@ load_aliases() {
         alias awslist=aws_list_profiles
         alias awsversion=aws_cli_version
         alias awslogout=aws_sso_logout
+        alias awspurge=aws_purge_creds
     fi
 
     # --- GCP aliases if gcloud exists
     if command -v gcloud >/dev/null 2>&1; then
-        alias gcpinstances=GCPListInstances
-        alias gcpsubnets=GCPListSubnets
-        alias gcporphanroutes=GCPGetOrphanedRoutesCore
-        alias gcporphan=GCPGetOrphanedRoutes
-        alias gcptoken=GCPGetAccessToken
-        alias gcpuser=GCPGetCoreAcct
-        alias gcproj=GCPGetProject
+        alias gcpvms=gcp_list_instances
+        alias gcpsubnets=gcp_list_subnets
+        alias gcporphanroutes=gcp_get_orphaned_routes_core
+        alias gcporphan=gcp_get_orphaned_routes
+        alias gcptoken=gcp_get_access_token
+        alias gcpuser=gcp_get_core_acct
+        alias gcproj=gcp_get_project
+        alias gcplogin=gcp_auth
+        alias gcplogout=gcp_deauth
         alias gcloud="$GCLOUD_CMD"
     fi
 

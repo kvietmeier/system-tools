@@ -48,14 +48,25 @@ gcp_auth() {
 }
 
 ###--- Deauthenticate from GCP
+###--- Deauthenticate from GCP
 gcp_deauth() {
     echo "Deauthenticating from GCP..."
 
-    # Revoke application default credentials (local cache)
+    # Revoke application default credentials (ADC)
     gcloud auth application-default revoke --quiet > /dev/null 2>&1
-    gcloud auth revoke --quiet > /dev/null 2>&1
 
-    echo "GCP authentication cleared from local session."
+    # Revoke all gcloud accounts
+    gcloud auth revoke --all --quiet > /dev/null 2>&1
+
+    # Unset active account and project
+    gcloud config unset account > /dev/null 2>&1
+    gcloud config unset project > /dev/null 2>&1
+
+    # Remove environment variables (current shell only)
+    unset GOOGLE_APPLICATION_CREDENTIALS
+    unset GCP_DEFAULT_PROJECT
+
+    echo "GCP authentication and local configuration cleared."
 }
 
 ###--- Check GCP Authentication Status - ported from PowerShell Get-GcpAuthStatus
@@ -67,44 +78,44 @@ gcp_status() {
 }
 
 # Get the current active Google Cloud project
-GCPGetProject() {
+gcp_get_project() {
     CurrentProject=$(gcloud info --format="value(config.project)")
     echo "The current active project is: $CurrentProject"
 }
 
 # Get the current core Google Cloud account
-GCPGetCoreAcct() {
+gcp_get_core_acct() {
     CoreAccount=$(gcloud config list account --format="value(core.account)")
     echo "The current core account is: $CoreAccount"
 }
 
 # Get the Google Cloud application default access token
-GCPGetAccessToken() {
+gcp_get_access_token() {
     GCPAccessToken=$(gcloud auth application-default print-access-token)
     echo "Current Access Token: $GCPAccessToken"
 }
 
 # Returns names of GCP routes that are not associated with any next hop
-GCPGetOrphanedRoutes() {
+gcp_get_orphaned_routes() {
     gcloud compute routes list \
         --filter="NOT (nextHopGateway:* OR nextHopIp:* OR nextHopInstance:* OR nextHopIlb:* OR nextHopVpnTunnel:* OR nextHopPeering:*)" \
         --format="value(name)"
 }
 
 # Returns orphaned routes in a specific VPC (example: karlv-corevpc)
-GCPGetOrphanedRoutesCore() {
+gcp_get_orphaned_routes_core() {
     gcloud compute routes list \
         --filter="network:karlv-corevpc AND NOT (nextHopGateway:* OR nextHopIp:* OR nextHopInstance:* OR nextHopIlb:* OR nextHopVpnTunnel:* OR nextHopPeering:*)" \
         --format="value(name)"
 }
 
 # List all subnets
-GCPListSubnets() {
+gcp_list_subnets() {
     gcloud compute networks subnets list
 }
 
 # List all VM instances with useful info
-GCPListInstances() {
+gcp_list_instances() {
     gcloud compute instances list \
         --format="table(name, status, networkInterfaces[0].accessConfigs[0].natIP, networkInterfaces[0].networkIP, zone)"
 }
@@ -124,7 +135,7 @@ GCPListInstances() {
 #   - Summarizes results at the end.
 # ====================================================================================
 
-GCPManageClientVMs() {
+gcp_manage_client_vms() {
     local ACTION=$1
     local COUNT=${2:-0}
 

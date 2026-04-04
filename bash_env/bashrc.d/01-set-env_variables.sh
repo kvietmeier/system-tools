@@ -25,6 +25,11 @@ export PATH
 export EDITOR=vim
 export VISUAL=vim
 
+# Enable session logging with script, but only if not already enabled to avoid nesting
+
+# For storing logs from script
+export SESSION_LOGS_DIR="${HOME}/projects/session_logs"
+
 ###############################################################################
 ### Localized Terraform Directories
 ###############################################################################
