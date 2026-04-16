@@ -28,7 +28,10 @@ export VISUAL=vim
 # Enable session logging with script, but only if not already enabled to avoid nesting
 
 # For storing logs from script
-export SESSION_LOGS_DIR="${HOME}/projects/session_logs"
+# Note: This is a custom variable for my scripts to know where to save session logs.
+export ASCII_LOG_DIR="/projects/personal/session_logs"
+export CONSOLE_LOGS_DIR="${HOME}/${ASCII_LOG_DIR}"
+
 
 ###############################################################################
 ### Localized Terraform Directories

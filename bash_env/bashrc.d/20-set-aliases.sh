@@ -1,4 +1,4 @@
-###############################################################################
+###=================================================================================================###
 ### Bash Aliases and Productivity Helpers
 ### File: .bashrc.d/20-set-aliases.sh
 ### Purpose: 
@@ -6,12 +6,10 @@
 ###   All aliases are loaded only if the corresponding tools exist
 ### Created by Karl Vietmeier
 ### License: Apache 2.0
-###############################################################################
+###=================================================================================================###
 
-# Load aliases only if the corresponding tools are installed, and 
 # include user-defined aliases if present
 load_aliases() {
-
     # --- Desktop Notifications for long-running commands
     alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" \
       "$(history | tail -n1 | sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
@@ -50,76 +48,8 @@ load_aliases() {
     alias df='df -kh'
     alias du='du -h'
 
-    # --- Terraform / VoC aliases only if Terraform is installed
-    if command -v terraform >/dev/null 2>&1; then
-
-        ###--- Terraform convenience aliases
-        alias tfclean='tfclean'
-        alias tfclstate='tfclstate'
-        alias tfinit='tfinit'
-        alias tfshow='tfshow'
-        alias tfapply='tfapply'
-        alias tfdestroy='tfdestroy'
-        alias tfplan='tfplan'
-
-        ###--- Output helper aliases
-        alias vms='tf_vms'
-        alias vmsmon='tf_vmsmon'
-        alias vmsip='tf_vmsip'
-        alias eboxips='tf_private_ips'
-
-        # VAST Terraform / VoC shortcuts
-        alias vasttf="cd ${VASTTF_ROOT}"          # VAST Terraform root
-        alias vocdir="cd ${TFDIR}/vast_on_cloud/5_3"
-        alias vastdir="cd ${VASTTF_ROOT}"
-        alias cluster01="cd ${VASTGCP}/cluster01"
-        alias cluster02="cd ${VASTGCP}/cluster02"
-        alias cluster03="cd ${VASTGCP}/cluster03"
-
-        # Optional VoC scripts
-        alias install_vast01="${HOME}/bin/vast.voc.install.py"
-        alias pgpsecrets="${HOME}/Terraform/scripts/vast.extracts3secret.sh"
-        alias vmsstat="${HOME}/bin/vms.status.py"
-    fi
-    
     # Utlities for getting public IP
     alias myip=get_my_ip
-
-    # --- AWS aliases if AWS CLI exists
-    if command -v aws >/dev/null 2>&1; then
-        alias awslogin=aws_sso_login
-        alias awscheck=aws_check_all_profiles
-        alias awslist=aws_list_profiles
-        alias awsversion=aws_cli_version
-        alias awslogout=aws_sso_logout
-        alias awspurge=aws_purge_creds
-    fi
-
-    # --- GCP aliases if gcloud exists
-    if command -v gcloud >/dev/null 2>&1; then
-        alias gcpvms=gcp_list_instances
-        alias gcpsubnets=gcp_list_subnets
-        alias gcporphanroutes=gcp_get_orphaned_routes_core
-        alias gcporphan=gcp_get_orphaned_routes
-        alias gcptoken=gcp_get_access_token
-        alias gcpuser=gcp_get_core_acct
-        alias gcproj=gcp_get_project
-        alias gcplogin=gcp_auth
-        alias gcplogout=gcp_deauth
-        alias gcloud="$GCLOUD_CMD"
-    fi
-
-    # --- Azure aliases if az exists
-    if command -v az >/dev/null 2>&1; then
-        alias azdisks=list_azdisks
-        alias azvms=list_azvms
-        alias azsubnets=list_azsubnets
-        alias azvnets=list_azvnets
-        alias azlogin=azlogin
-        alias azlogout=azlogout
-        alias azshow=azshow
-        alias azcontext=azcontext
-    fi
 
     # --- Include user-defined aliases if present
     [ -f "${HOME}/.bash_aliases" ] && . "${HOME}/.bash_aliases"

@@ -187,3 +187,19 @@ function lits_azdisks() {
         -o table
 }
 
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- Azure aliases if az exists
+if command -v az >/dev/null 2>&1; then
+    alias azdisks=list_azdisks
+    alias azvms=list_azvms
+    alias azsubnets=list_azsubnets
+    alias azvnets=list_azvnets
+    alias azlogin=azlogin
+    alias azlogout=azlogout
+    alias azshow=azshow
+    alias azcontext=azcontext
+fi

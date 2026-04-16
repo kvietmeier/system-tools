@@ -79,3 +79,40 @@ tfclstate() {
     terraform init
 }
 
+
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- Terraform / VoC aliases only if Terraform is installed
+if command -v terraform >/dev/null 2>&1; then
+
+    ###--- Terraform convenience aliases
+    alias tfclean='tfclean'
+    alias tfclstate='tfclstate'
+    alias tfinit='tfinit'
+    alias tfshow='tfshow'
+    alias tfapply='tfapply'
+    alias tfdestroy='tfdestroy'
+    alias tfplan='tfplan'
+
+    ###--- Output helper aliases
+    alias vms='tf_vms'
+    alias vmsmon='tf_vmsmon'
+    alias vmsip='tf_vmsip'
+    alias eboxips='tf_private_ips'
+
+    # VAST Terraform / VoC shortcuts
+    alias vasttf="cd ${VASTTF_ROOT}"          # VAST Terraform root
+    alias vocdir="cd ${TFDIR}/vast_on_cloud/5_3"
+    alias vastdir="cd ${VASTTF_ROOT}"
+    alias cluster01="cd ${VASTGCP}/cluster01"
+    alias cluster02="cd ${VASTGCP}/cluster02"
+    alias cluster03="cd ${VASTGCP}/cluster03"
+
+    # Optional VoC scripts
+    alias install_vast01="${HOME}/bin/vast.voc.install.py"
+    alias pgpsecrets="${HOME}/Terraform/scripts/vast.extracts3secret.sh"
+    alias vmsstat="${HOME}/bin/vms.status.py"
+fi

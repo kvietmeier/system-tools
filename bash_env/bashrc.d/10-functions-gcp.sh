@@ -120,6 +120,16 @@ gcp_list_instances() {
         --format="table(name, status, networkInterfaces[0].accessConfigs[0].natIP, networkInterfaces[0].networkIP, zone)"
 }
 
+# List allocated private IPs
+gcp_list_vm_ips() {
+   gcloud compute instances list --format='table(name, zone, networkInterfaces[0].networkIP:label=PRIVATE_IP)'
+}
+
+gcp_list_private_ips() {
+   gcloud compute addresses list --filter="addressType=INTERNAL" --format="table(name, address, region, status, purpose)"
+}
+
+
 
 # ====================================================================================
 # GCPManageClientVMs
@@ -299,3 +309,23 @@ gcp_remove_ips() {
   echo "✅ Cleanup complete."
 }
 
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- GCP aliases if gcloud exists
+if command -v gcloud >/dev/null 2>&1; then
+    alias gcpvms=gcp_list_instances
+    alias gcpsubnets=gcp_list_subnets
+    alias gcporphanroutes=gcp_get_orphaned_routes_core
+    alias gcporphan=gcp_get_orphaned_routes
+    alias gcptoken=gcp_get_access_token
+    alias gcpuser=gcp_get_core_acct
+    alias gcproj=gcp_get_project
+    alias gcplogin=gcp_auth
+    alias gcplogout=gcp_deauth
+    alias gcpvmips=gcp_list_vm_ips
+    alias gcpallips=gcp_list_private_ips
+    alias gcloud="$GCLOUD_CMD"
+fi
