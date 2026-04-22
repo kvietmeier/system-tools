@@ -1,0 +1,1271 @@
+###############################################################################
+### Setup Environment Variables
+### File: .bashrc.d/01-set-env_variables.sh
+### Purpose:
+###   Sets PATH, general environment variables,
+###   environment detection, and sources personal variables.
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###############################################################################
+
+###============================================================###
+### PATH Configuration
+###============================================================###
+
+case ":$PATH:" in
+  *":$HOME/.local/bin:$HOME/bin:"*) ;;
+  *) PATH="$HOME/.local/bin:$HOME/bin:$PATH" ;;
+esac
+export PATH
+
+###############################################################################
+### General Environment Variables
+###############################################################################
+
+export EDITOR=vim
+export VISUAL=vim
+
+# Enable session logging with script, but only if not already enabled to avoid nesting
+
+# For storing logs from script
+# Note: This is a custom variable for my scripts to know where to save session logs.
+export ASCII_LOG_DIR="/projects/personal/session_logs"
+export CONSOLE_LOGS_DIR="${HOME}/${ASCII_LOG_DIR}"
+
+
+###############################################################################
+### Localized Terraform Directories
+###############################################################################
+
+# Directory where all repositories are stored
+export REPO_DIR="${HOME}/projects"
+
+# Shotrcut variables for Terraform and VoC directories within the repository
+export TFDIR="${REPO_DIR}/Terraform"
+export VASTTF="${TFDIR}/vastdata"
+export VOCDIR="${REPO_DIR}/vast_on_cloud"
+
+export TFGCP="${TFDIR}/gcp/"
+export TFAWS="${TFDIR}/aws/"
+export TFAZ="${TFDIR}/azure/"
+
+###############################################################################
+### Google Cloud SDK Configuration - WSL
+###############################################################################
+
+# Needed for gcloud CLI to find the correct Python interpreter in WSL 
+# and avoid conflicts with Windows Python installations - works for all Distro
+export GCLOUD_CMD="/usr/bin/gcloud"
+
+###############################################################################
+### Environment Tag: WSL / Cloud / Local
+###############################################################################
+
+ENV_TAG=""
+
+# WSL detection
+if [[ -n "$WSL_DISTRO_NAME" ]]; then
+    ENV_TAG=" [WSL] "
+
+# Cloud VM detection by product_name
+elif [[ -r /sys/class/dmi/id/product_name ]]; then
+    product_name=$(cat /sys/class/dmi/id/product_name 2>/dev/null)
+    case "$product_name" in
+        "Virtual Machine")        ENV_TAG=" [Azure] " ;;
+        "Google Compute Engine")  ENV_TAG=" [GCP] " ;;
+        "HVM domU")               ENV_TAG=" [AWS] " ;;
+    esac
+fi
+
+export ENV_TAG
+
+
+###############################################################################
+### WSL-Specific Adjustments
+###############################################################################
+
+if grep -qi microsoft /proc/version 2>/dev/null; then
+
+    for win_path in \
+        "/mnt/c/Users/karl.vietmeier/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin" \
+        "/mnt/c/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/bin" \
+        "/mnt/c/Program Files/Google/Google Apps Sync/"; do
+
+        PATH=$(echo "$PATH" | tr ':' '\n' | grep -vF "$win_path" | tr '\n' ':' | sed 's/:$//')
+    done
+
+    export PATH
+
+    if command -v wslview >/dev/null 2>&1; then
+        export BROWSER=wslview
+    fi
+fi
+
+###############################################################################
+# Include Personal Environment Variables
+###############################################################################
+
+[ -f "${HOME}/.bash_environment" ] && . "${HOME}/.bash_environment"
+###############################################################################
+### Terminal, History, and Prompt Configuration
+### File: .bashrc.d/02-terminal-settings.sh
+### Purpose: 
+###   Configure shell history, colors, aliases, terminal options, and prompt
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###############################################################################
+
+# Only run in interactive shells
+[[ $- != *i* ]] && return
+
+###############################################################################
+### History
+###############################################################################
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+export HISTCONTROL=ignoreboth:erasedups
+export HISTIGNORE="ls:bg:fg:history"
+export HISTFILE=~/.bash_history
+
+# Append to history and read new lines immediately
+history_sync() {
+    history -a
+    history -n
+}
+
+###############################################################################
+### Terminal Options
+###############################################################################
+shopt -s checkwinsize        # auto-resize window
+set -o vi                    # vi-style editing
+bind 'set bell-style none'   # disable terminal bell
+
+###############################################################################
+### Aliases
+###############################################################################
+if [ -x /usr/bin/dircolors ]; then
+    if [ -r ~/.dircolors ]; then
+        eval "$(dircolors -b ~/.dircolors)"
+    else
+        eval "$(dircolors -b)"
+    fi
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+alias ls='ls -hF --color=auto'
+alias l='ls -CFv'
+alias la='ls -Av'
+alias ll='ls -lhvF --group-directories-first'
+alias lla='ls -alhvF --group-directories-first'
+alias df='df -kh'
+alias du='du -h'
+alias up='cd ..'
+alias up2='cd ../..'
+alias up3='cd ../../..'
+alias refresh=". ${HOME}/.bashrc"
+
+###############################################################################
+### Prompt Configuration
+###############################################################################
+case "$TERM" in
+    xterm-color|*-256color) __color_prompt=yes ;;
+    *) __color_prompt=no ;;
+esac
+
+if [[ "$__color_prompt" == yes ]]; then
+    PS1="\[\033[01;32m\]\u@\h${ENV_TAG}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+else
+    PS1="\u@\h${ENV_TAG}:\w\$ "
+fi
+unset __color_prompt
+
+###############################################################################
+### Terminal Title
+###############################################################################
+update_terminal_title() {
+    printf "\033]0;%s\007" "${USER}@${HOSTNAME}${ENV_TAG}: ${PWD}"
+}
+
+###############################################################################
+### PROMPT_COMMAND
+###############################################################################
+# Append our functions safely to PROMPT_COMMAND
+case "$PROMPT_COMMAND" in
+    *history_sync*) ;;
+    *)
+        if [[ -n "$PROMPT_COMMAND" ]]; then
+            PROMPT_COMMAND="history_sync; update_terminal_title; $PROMPT_COMMAND"
+        else
+            PROMPT_COMMAND="history_sync; update_terminal_title"
+        fi
+        ;;
+esac
+
+###############################################################################
+### Export prompt variables
+###############################################################################
+export PS1
+export PROMPT_COMMAND###===============================================================================================###
+#    Misc utilities
+#    File: .bashrc.d/03-functions-utility.sh
+#     Purpose: 
+#     Everything else that doesn't fit in the other categories, like custom functions and aliases
+#    Created by Karl Vietmeier
+#    License: Apache 2.0
+###===============================================================================================###
+
+
+#==============================================#
+# Function: GetMyIP
+# Purpose: Get public IP from ipinfo.io and export it
+#==============================================#
+get_my_ip() {
+    # Attempt to get public IP from ipinfo.io
+    if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        response=$(curl -s https://ipinfo.io)
+        my_ip=$(echo "$response" | jq -r '.ip // empty')
+
+        if [ -n "$my_ip" ]; then
+            echo
+            echo "Current Router/VPN IP: $my_ip"
+            echo
+            export MYIP="$my_ip"
+        else
+            echo "Unable to retrieve IP from ipinfo.io"
+            return 1
+        fi
+    else
+        echo "Error: curl and jq are required to run GetMyIP"
+        return 2
+    fi
+}
+
+
+# logson / logsoff
+# ----------------
+# Uses asciinema which must be installed separately, to record terminal sessions in a shareable format.
+# https://docs.asciinema.org/
+# logson starts an asciinema session, recording all commands and output in real time.
+# Logs are saved in SESSION_LOGS_DIR with a unique filename: hostname_user_timestamp.cast.
+# logsoff reminds you to stop logging by pressing Ctrl-D or typing exit.
+logson() {
+
+    # Check if asciinema is installed
+    if ! command -v asciinema &> /dev/null; then
+        echo "❌ asciinema not found. Please install it first."
+        return 1
+    fi
+
+    mkdir -p $CONSOLE_LOGS_DIR  # Ensure log directory exists
+    TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+    LOGFILE="${CONSOLE_LOGS_DIR}/$(hostname)_${USER}_${TIMESTAMP}.cast"
+
+    echo "📄 Logging session to: $LOGFILE"
+    echo "💡 Press Ctrl-D or type 'exit' to stop logging"
+
+    asciinema rec $LOGFILE
+}
+
+logsoff() {
+    echo "🟢 Press Ctrl-D in the asciinema session to stop logging."
+}
+
+# List all asciinema logs in CONSOLE_LOGS_DIR
+listlogs() {
+    echo "📄 Logs in $CONSOLE_LOGS_DIR:"
+    ls -1t "$CONSOLE_LOGS_DIR"
+}
+
+
+###===============================================================================================###
+#    vastcloud
+###===============================================================================================###
+
+### Using staging
+export VASTC_GCP=staging-gcp-clouddev-itdesk124-ctx
+export VASTC_AWS=staging-aws-600627351840-ctx
+
+vc_use() {
+    case "$1" in
+        gcp)
+            export VASTC_CONTEXT="$VASTC_GCP"
+            ;;
+        aws)
+            export VASTC_CONTEXT="$VASTC_AWS"
+            ;;
+        *)
+            echo "Usage: vast_use {gcp|aws}"
+            return 1
+            ;;
+    esac
+
+    vastcloud config use-context "$VASTC_CONTEXT"
+    echo "🔹 Active context: $VASTC_CONTEXT"
+}
+
+
+vast_status() {
+    echo "=============================="
+    echo "VASTCloud Status"
+    echo "=============================="
+
+    echo ""
+    echo "🔹 Context:"
+    vastcloud config current-context 2>/dev/null || echo "  (no context available)"
+
+    echo ""
+    echo "🔹 Auth Status:"
+    vastcloud auth status 2>/dev/null || echo "  (not authenticated)"
+
+    echo ""
+    echo "=============================="
+}
+
+
+alias vcls='vastcloud cluster list'
+alias vcauth='vastcloud auth status'
+alias vcuse='vc_use'
+alias vcstatus='vast_status'#!/bin/bash
+###############################################################################
+# 06-terminal-multiplexers.sh
+# Setup tmux and screen
+# Created by Karl Vietmeier
+###############################################################################
+
+# --- Tmux Settings ---
+# Ensure Tmux uses 256 colors for pretty syntax highlighting
+export TERM="xterm-256color"
+
+# Alias to start tmux with a shared session name 'main'
+alias tm='tmux attach -t main || tmux new -s main'
+
+# --- Screen Settings ---
+# Prevent screen from showing the startup copyright notice
+alias screen='screen -q'
+
+# --- Utility Aliases ---
+alias tl='tmux ls'
+alias ta='tmux attach -t'
+###############################################################################
+### GCP Authentication and Utilities
+### File: .bashrc.d/10-functions-gcp.sh
+### Purpose: 
+###   Simplify GCP service account authentication and deauthentication
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###############################################################################
+
+
+###--- Authenticate to GCP using service account credentials
+###--- Assumes environment variables are set in .bash_environment or manually:
+
+gcp_auth() {
+    # Validate environment variables and credentials file
+    {
+        [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ -f "$GOOGLE_APPLICATION_CREDENTIALS" ] || {
+            echo "Missing or invalid credentials file: \$GOOGLE_APPLICATION_CREDENTIALS is not set or file does not exist"
+            return 1
+        }
+
+        [ -n "$GCP_DEFAULT_PROJECT" ] || {
+            echo "Missing GCP project ID. Set GCP_DEFAULT_PROJECT environment variable."
+            return 1
+        }
+    }
+
+    echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+
+    # Activate service account and set project
+    gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" > /dev/null 2>&1 || {
+        echo "Failed to activate service account."
+        return 1
+    }
+
+    gcloud config set project "$GCP_DEFAULT_PROJECT" > /dev/null 2>&1 || {
+        echo "Failed to set GCP project: $GCP_DEFAULT_PROJECT"
+        return 1
+    }
+
+    # Validate Application Default Credentials
+    gcloud auth application-default print-access-token > /dev/null 2>&1 || {
+        echo "Failed to retrieve access token."
+        return 1
+    }
+
+    echo "Service account activated, project set, and ADC validated."
+}
+
+###--- Deauthenticate from GCP
+###--- Deauthenticate from GCP
+gcp_deauth() {
+    echo "Deauthenticating from GCP..."
+
+    # Revoke application default credentials (ADC)
+    gcloud auth application-default revoke --quiet > /dev/null 2>&1
+
+    # Revoke all gcloud accounts
+    gcloud auth revoke --all --quiet > /dev/null 2>&1
+
+    # Unset active account and project
+    gcloud config unset account > /dev/null 2>&1
+    gcloud config unset project > /dev/null 2>&1
+
+    # Remove environment variables (current shell only)
+    unset GOOGLE_APPLICATION_CREDENTIALS
+    unset GCP_DEFAULT_PROJECT
+
+    echo "GCP authentication and local configuration cleared."
+}
+
+###--- Check GCP Authentication Status - ported from PowerShell Get-GcpAuthStatus
+gcp_status() {
+    echo "GCP Authentication Status:"         
+    gcloud auth list --filter=status:ACTIVE --format="value(account)" || echo "No active account"
+    echo "Current GCP Project:"
+    gcloud config get-value project || echo "No project set"
+}
+
+# Get the current active Google Cloud project
+gcp_get_project() {
+    CurrentProject=$(gcloud info --format="value(config.project)")
+    echo "The current active project is: $CurrentProject"
+}
+
+# Get the current core Google Cloud account
+gcp_get_core_acct() {
+    CoreAccount=$(gcloud config list account --format="value(core.account)")
+    echo "The current core account is: $CoreAccount"
+}
+
+# Get the Google Cloud application default access token
+gcp_get_access_token() {
+    GCPAccessToken=$(gcloud auth application-default print-access-token)
+    echo "Current Access Token: $GCPAccessToken"
+}
+
+# Returns names of GCP routes that are not associated with any next hop
+gcp_get_orphaned_routes() {
+    gcloud compute routes list \
+        --filter="NOT (nextHopGateway:* OR nextHopIp:* OR nextHopInstance:* OR nextHopIlb:* OR nextHopVpnTunnel:* OR nextHopPeering:*)" \
+        --format="value(name)"
+}
+
+# Returns orphaned routes in a specific VPC (example: karlv-corevpc)
+gcp_get_orphaned_routes_core() {
+    gcloud compute routes list \
+        --filter="network:karlv-corevpc AND NOT (nextHopGateway:* OR nextHopIp:* OR nextHopInstance:* OR nextHopIlb:* OR nextHopVpnTunnel:* OR nextHopPeering:*)" \
+        --format="value(name)"
+}
+
+# List all subnets
+gcp_list_subnets() {
+    gcloud compute networks subnets list
+}
+
+# List all VM instances with useful info
+gcp_list_instances() {
+    gcloud compute instances list \
+        --format="table(name, status, networkInterfaces[0].accessConfigs[0].natIP, networkInterfaces[0].networkIP, zone)"
+}
+
+# List allocated private IPs
+gcp_list_vm_ips() {
+   gcloud compute instances list --format='table(name, zone, networkInterfaces[0].networkIP:label=PRIVATE_IP)'
+}
+
+gcp_list_private_ips() {
+   gcloud compute addresses list --filter="addressType=INTERNAL" --format="table(name, address, region, status, purpose)"
+}
+
+
+
+# ====================================================================================
+# GCPManageClientVMs
+# Usage: GCPManageClientVMs <start|stop|resume> [count]
+# ====================================================================================
+# Function to start or stop a list of Google Cloud VM instances.
+# - Action: "start" or "stop"
+# - Count: optional, limits how many VMs to process (default: all)
+#
+# The function:
+#   - Skips VMs already in the desired state (RUNNING/TERMINATED/SUSPENDED).
+#   - Executes gcloud operations in parallel for speed.
+#   - Summarizes results at the end.
+# ====================================================================================
+
+gcp_manage_client_vms() {
+    local ACTION=$1
+    local COUNT=${2:-0}
+
+    local VMS=("client01" "client02" "client03" "client04" "client05" \
+               "client06" "client07" "client08" "client09" "client10" "client11")
+
+    # Trim the list if COUNT is specified
+    if [[ $COUNT -gt 0 ]]; then
+        VMS=("${VMS[@]:0:$COUNT}")
+    fi
+
+    declare -A JOB_PIDS
+    declare -A JOB_RESULTS
+
+    # Disable job control messages
+    set +m
+
+    for VM in "${VMS[@]}"; do
+        ZONE=$(gcloud compute instances list --filter="name=$VM" --format="value(zone)" | head -n1)
+        if [[ -z "$ZONE" ]]; then
+            echo "Error: Could not determine zone for $VM"
+            JOB_RESULTS["$VM"]="Failed"
+            continue
+        fi
+
+        STATUS=$(gcloud compute instances describe "$VM" --zone "$ZONE" --format="get(status)")
+
+        if [[ "$ACTION" == "start" && "$STATUS" == "RUNNING" ]]; then
+            echo "$VM is already RUNNING, skipping."
+            JOB_RESULTS["$VM"]="Skipped"
+            continue
+        elif [[ "$ACTION" == "stop" && "$STATUS" == "TERMINATED" ]]; then
+            echo "$VM is already TERMINATED, skipping."
+            JOB_RESULTS["$VM"]="Skipped"
+            continue
+        fi
+
+        echo "Queuing $ACTION for $VM (current status: $STATUS)..."
+
+        # Run each gcloud command in a background subshell, redirecting all output to /dev/null
+        (
+            if [[ "$ACTION" == "start" && "$STATUS" == "SUSPENDED" ]]; then
+                gcloud compute instances resume "$VM" --zone "$ZONE" &>/dev/null
+            else
+                gcloud compute instances "$ACTION" "$VM" --zone "$ZONE" &>/dev/null
+            fi
+        ) &
+        JOB_PIDS["$VM"]=$!
+    done
+
+    # Wait for all background jobs
+    for VM in "${!JOB_PIDS[@]}"; do
+        wait "${JOB_PIDS[$VM]}"
+        JOB_RESULTS["$VM"]="Completed"
+    done
+
+    echo ""
+    for VM in "${VMS[@]}"; do
+        echo "Result for $VM: ${JOB_RESULTS[$VM]:-Skipped}"
+    done
+
+    echo "All requested VM operations finished."
+}
+
+gcp_check_roles() {
+  local PROJECT_ID
+  PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
+  
+  local FILTER="$1"
+
+  if [[ -z "$PROJECT_ID" ]]; then
+    echo "Usage: check_roles <project-id> [filter]"
+    return 1
+  fi
+
+  echo "🔎 Checking IAM custom roles in project: $PROJECT_ID"
+  echo
+
+  if [[ -n "$FILTER" ]]; then
+    gcloud iam roles list \
+      --project="$PROJECT_ID" \
+      --filter="name:$FILTER"
+  else
+    gcloud iam roles list \
+      --project="$PROJECT_ID"
+  fi
+}
+
+get_reserved_ips() {
+  local PROJECT_ID
+  PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
+
+  if [[ -z "$PROJECT_ID" ]]; then
+    echo "❌ No active gcloud project set."
+    echo "Run: gcloud config set project <project-id>"
+    return 1
+  fi
+
+  local FILTER="$1"
+  local REGION="$2"
+  local GLOBAL="$3"
+
+  echo "🌐 Checking provisioned addresses in project: $PROJECT_ID"
+  echo
+
+  if [[ "$GLOBAL" == "global" ]]; then
+    gcloud compute addresses list \
+      --project="$PROJECT_ID" \
+      --global \
+      ${FILTER:+--filter="name~$FILTER"}
+  else
+    gcloud compute addresses list \
+      --project="$PROJECT_ID" \
+      ${REGION:+--regions="$REGION"} \
+      ${FILTER:+--filter="name~$FILTER"}
+  fi
+}
+
+# Deletes RESERVED addresses matching a name filter in a specified region
+gcp_remove_ips() {
+  local FILTER="$1"
+  local REGION="$2"
+
+  if [[ -z "$FILTER" || -z "$REGION" ]]; then
+    echo "Usage: gcleanips <name-filter> <region>"
+    echo "Example: gcleanips polaris us-central1"
+    return 1
+  fi
+
+  echo ""
+  echo "🔍 Searching for RESERVED addresses matching '$FILTER' in $REGION..."
+  echo ""
+
+  ADDRESSES=$(gcloud compute addresses list \
+    --filter="name~$FILTER AND region:($REGION) AND status=RESERVED" \
+    --format="value(name)")
+
+  if [[ -z "$ADDRESSES" ]]; then
+    echo "✅ No matching RESERVED addresses found."
+    return 0
+  fi
+
+  echo "The following addresses will be deleted:"
+  echo "$ADDRESSES"
+  echo ""
+
+  read -p "Proceed? (y/N): " CONFIRM
+  if [[ "$CONFIRM" != "y" ]]; then
+    echo "Aborted."
+    return 1
+  fi
+
+  echo ""
+  echo "🗑 Deleting..."
+  echo ""
+
+  echo "$ADDRESSES" | xargs -r -I {} \
+    gcloud compute addresses delete {} --region="$REGION" -q
+
+  echo ""
+  echo "✅ Cleanup complete."
+}
+
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- GCP aliases if gcloud exists
+if command -v gcloud >/dev/null 2>&1; then
+    alias gcpvms=gcp_list_instances
+    alias gcpsubnets=gcp_list_subnets
+    alias gcporphanroutes=gcp_get_orphaned_routes_core
+    alias gcporphan=gcp_get_orphaned_routes
+    alias gcptoken=gcp_get_access_token
+    alias gcpuser=gcp_get_core_acct
+    alias gcproj=gcp_get_project
+    alias gcplogin=gcp_auth
+    alias gcplogout=gcp_deauth
+    alias gcpvmips=gcp_list_vm_ips
+    alias gcpallips=gcp_list_private_ips
+    alias gcloud="$GCLOUD_CMD"
+fi###=================================================================================================###
+### AWS Authentication Helpers
+### File: .bashrc.d/11-functions-aws.sh
+### Purpose:
+###   Simplify AWS SSO login via dynamic profile selection
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###=================================================================================================###
+
+###--- Set Active AWS Profile
+aws_use() {
+    if [ -z "$1" ]; then
+        echo "Usage: aws_use <profile>"
+        return 1
+    fi
+
+    export AWS_PROFILE="$1"
+    echo "🔹 AWS profile set to: $AWS_PROFILE"
+}
+
+
+###--- AWS SSO Login Function (Interactive / AWS_PROFILE-aware)
+aws_sso_login() {
+    local profile="${1:-${AWS_PROFILE:-}}"
+
+    if [ -n "$profile" ]; then
+        export AWS_PROFILE="$profile"
+        echo "🔐 Logging into AWS SSO using profile: $AWS_PROFILE ..."
+        aws sso login --profile "$AWS_PROFILE" --no-browser
+        return
+    fi
+
+    # Interactive fallback
+    local profiles
+    profiles=($(grep '^\[profile ' ~/.aws/config 2>/dev/null | sed -E 's/^\[profile (.+)\]/\1/'))
+
+    if [ ${#profiles[@]} -eq 0 ]; then
+        echo "No AWS profiles found in ~/.aws/config."
+        return 1
+    fi
+
+    echo "Select AWS SSO profile:"
+    select profile in "${profiles[@]}"; do
+        if [ -n "$profile" ]; then
+            echo "Logging into $profile ..."
+            aws sso login --profile "$profile" --no-browser
+            break
+        else
+            echo "Invalid choice. Please select a number from the list."
+        fi
+    done
+}
+
+# Convenience aliases for specific AWS SSO profiles (customize as needed)
+aws_rnd() { aws_sso_login VastData_RnD-Admin; }
+aws_poc() { aws_sso_login AWS-POC-VOC-Admin; }
+
+###--- Check AWS SSO Login Status for Current Profile
+aws_sso_status() {
+    local cache_file
+    cache_file=$(ls -t ~/.aws/sso/cache/*.json 2>/dev/null | head -n 1)
+
+    if [ -z "$cache_file" ]; then
+        echo "❌ Not logged in (no cache)"
+        return 1
+    fi
+
+    local expires exp_epoch now_epoch
+    expires=$(jq -r '.expiresAt' "$cache_file")
+    exp_epoch=$(date -d "$expires" +%s 2>/dev/null)
+    now_epoch=$(date +%s)
+
+    if [ "$now_epoch" -lt "$exp_epoch" ]; then
+        echo "✅ SSO session valid until $expires"
+    else
+        echo "⚠️ SSO session expired"
+    fi
+}
+
+
+###--- AWS CLI Version Check
+aws_cli_version() {
+    if ! command -v aws &> /dev/null; then
+        echo "AWS CLI is not installed."
+        return 1
+    fi
+    aws --version
+}
+
+###--- AWS SSO Logout Function
+aws_sso_logout() {
+    echo "Logging out from all AWS SSO sessions..."
+    aws sso logout
+    echo "All AWS SSO sessions logged out."
+}
+
+###--- AWS WhoAmI Function (Current Caller Identity)
+aws_whoami() {
+    echo "🔹 Profile: ${AWS_PROFILE:-none}"
+    aws sts get-caller-identity \
+        --query '{Account:Account, Arn:Arn}' \
+        --output table 2>/dev/null || echo "❌ Not logged in"
+}
+
+
+###--- List AWS Profiles
+aws_list_profiles() {
+    echo "i###---  Available AWS Profiles  ---###"
+    grep '^\[profile ' ~/.aws/config 2>/dev/null | sed -E 's/^\[profile (.+)\]/\1/' || echo "No profiles found"
+}
+
+###--- AWS Purge All Credentials (SSO + static)
+aws_purge_creds() {
+    echo "Logging out from all AWS SSO sessions..."
+    aws sso logout
+    echo "Logged out from AWS SSO"
+
+    echo "Purging all AWS cached credentials..."
+
+    # Remove AWS SSO cache
+    if [ -d "$HOME/.aws/sso/cache" ]; then
+        rm -f "$HOME/.aws/sso/cache"/*
+        echo "Cleared ~/.aws/sso/cache"
+    else
+        echo "No SSO cache found."
+    fi
+
+    # Remove all credentials from ~/.aws/credentials
+    if [ -f "$HOME/.aws/credentials" ]; then
+        > "$HOME/.aws/credentials"
+        echo "Cleared ~/.aws/credentials file"
+    else
+        echo "No credentials file found."
+    fi
+
+    echo "AWS credential purge complete."
+}
+
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+if command -v aws >/dev/null 2>&1; then
+   # AWS SSO login/logout and profile management
+   alias awslogin=aws_sso_login
+   alias awslist=aws_list_profiles
+   alias awsversion=aws_cli_version
+   alias awslogout=aws_sso_logout
+   alias awspurge=aws_purge_creds
+   
+   # AWS WhoAmI and SSO status
+   alias awswho=aws_whoami
+   alias awstatus=aws_sso_status
+   
+   # Convenience aliases for specific AWS SSO profiles (customize as needed)
+   alias awsrnd='aws_sso_login VastData_RnD-Admin'
+   alias awspoc='aws_sso_login AWS-POC-VOC-Admin'
+fi
+
+
+###=================================================================================================###
+### Doesn't work
+###--- Check AWS SSO Login Status (Dynamic, Skip Key Profiles)
+aws_check_all_profiles() {
+    local profiles
+    profiles=($(grep '^\[profile ' ~/.aws/config 2>/dev/null | sed -E 's/^\[profile (.+)\]/\1/'))
+
+    if [ ${#profiles[@]} -eq 0 ]; then
+        echo "No AWS profiles found."
+        return 1
+    fi
+
+    for profile in "${profiles[@]}"; do
+        [[ "$profile" == *Key* ]] && continue
+
+        echo "===> Checking profile: $profile"
+
+        # Try to get role credentials (forces SSO validation)
+        if aws sts get-caller-identity --profile "$profile" >/dev/null 2>&1; then
+            # Now check if token is actually valid via cache expiration
+            local cache_file
+            cache_file=$(ls -t ~/.aws/sso/cache/*.json 2>/dev/null | head -n 1)
+
+            if [ -n "$cache_file" ]; then
+                local expires
+                expires=$(jq -r '.expiresAt' "$cache_file" 2>/dev/null)
+
+                if [ -n "$expires" ]; then
+                    local exp_epoch now_epoch
+                    exp_epoch=$(date -d "$expires" +%s 2>/dev/null)
+                    now_epoch=$(date +%s)
+
+                    if [ "$now_epoch" -lt "$exp_epoch" ]; then
+                        echo "✅ Logged in (valid until $expires)"
+                    else
+                        echo "⚠️ Token expired"
+                    fi
+                else
+                    echo "⚠️ Could not read expiration"
+                fi
+            else
+                echo "⚠️ No SSO cache found"
+            fi
+        else
+            echo "❌ Not logged in"
+        fi
+
+        echo "---------------------------------------------"
+    done
+}###############################################################################
+### Azure functions
+### File: .bashrc.d/12-functions-azure.sh
+### Purpose: 
+###  Simplify Azure authentication and related tasks
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###############################################################################
+
+### Assumes environment variables are set in .bash_environment or manually:
+# export AZURE_CLIENT_ID="your-client-id"
+# export AZURE_CLIENT_SECRET="your-client-secret"
+# export AZURE_TENANT_ID="your-tenant-id"
+# export AZURE_SUBSCRIPTION_ID="your-subscription-id"
+# export AZURE_SUBSCRIPTION_NAME="your-subscription-name"
+# export AZURE_TENANT_DOMAIN="your-tenant-domain"
+# export AZURE_RESOURCE_GROUP="your-default-resource-group"
+
+###############################################################################
+### Helper function: Check current Azure CLI context
+###############################################################################
+function azcontext() {
+    if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
+        echo "Variable \$AZURE_SUBSCRIPTION_ID not set. Please define subscription details first."
+        return 1
+    fi
+
+    # Get current Azure CLI subscription ID
+    local current_sub_id
+    current_sub_id=$(az account show --query "id" -o tsv 2>/dev/null)
+
+    if [ -z "$current_sub_id" ] || [ "$current_sub_id" != "$AZURE_SUBSCRIPTION_ID" ]; then
+        echo ""
+        echo "======================================================="
+        echo "  No Azure Connection — use 'azlogin' to connect       "
+        echo "======================================================="
+        echo ""
+        return 1
+    else
+        echo ""
+        echo "======================================================================="
+        echo "  ${AZURE_SUBSCRIPTION_NAME:-<unknown>} in ${AZURE_TENANT_DOMAIN:-<unknown>} is logged in"
+        echo "======================================================================="
+        echo ""
+    fi
+}
+
+
+###############################################################################
+### Function: Login to Azure with a Service Principal
+###############################################################################
+function azlogin() {
+    if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_CLIENT_SECRET" ] || \
+       [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
+        echo "Missing required variables for Azure CLI Service Principal login."
+        echo "Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are set."
+        return 1
+    fi
+
+    echo ""
+    echo "Authenticating to Azure Subscription: $AZURE_SUBSCRIPTION_ID"
+    echo ""
+
+    az login \
+        --service-principal \
+        --username "$AZURE_CLIENT_ID" \
+        --password "$AZURE_CLIENT_SECRET" \
+        --tenant "$AZURE_TENANT_ID" >/dev/null
+
+    # Set the subscription context
+    az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null
+
+    echo "Azure CLI logged in to subscription: $AZURE_SUBSCRIPTION_ID"
+}
+
+
+###############################################################################
+### Function: Logout from Azure
+###############################################################################
+function azlogout() {
+    if [ -n "$AZURE_CLIENT_ID" ]; then
+        az logout --username "$AZURE_CLIENT_ID" >/dev/null
+        echo "Azure CLI logged out: $AZURE_CLIENT_ID"
+    else
+        echo "Variable AZURE_CLIENT_ID not set. Logging out all sessions."
+        az logout >/dev/null
+    fi
+}
+
+
+###############################################################################
+### Function: Show current Azure account info
+###############################################################################
+function azshow() {
+    az account show --output table
+}
+
+###====================================================================================================###
+###--- Azure Info Functions
+###====================================================================================================###
+
+# List all Azure regions (available to all subscriptions)
+function azregions() {
+    az account list-locations \
+        --query '[].{Name:name, DisplayName:displayName, Region:regionalDisplayName}' \
+        -o table
+}
+
+# List available regions for your current subscription (filtered by your account)
+function myregions() {
+    az account list-locations \
+        --query '[].{Name:name, DisplayName:displayName}' \
+        -o table
+}
+
+function list_azvnets() {
+    local rg_name="${1:-$AZURE_RESOURCE_GROUP}"
+
+    if [ -z "$rg_name" ]; then
+        echo "Usage: azvnets <resource-group>"
+        echo "Or set AZURE_RESOURCE_GROUP in your environment."
+        return 1
+    fi
+
+    echo "Listing VNets in resource group: $rg_name"
+    az network vnet list \
+        --resource-group "$rg_name" \
+        --query '[].{Name:name, Location:location, AddressSpace:addressSpace.addressPrefixes[0]}' \
+        -o table
+}
+
+function list_azsubnets() {
+    local rg_name="${1:-$AZURE_RESOURCE_GROUP}"
+    local vnet_name="${2}"
+
+    if [ -z "$rg_name" ] || [ -z "$vnet_name" ]; then
+        echo "Usage: azsubnets <resource-group> <vnet-name>"
+        echo "Or set AZURE_RESOURCE_GROUP in your environment."
+        return 1
+    fi
+
+    echo "Listing Subnets in VNet: $vnet_name (Resource Group: $rg_name)"
+    az network vnet subnet list \
+        --resource-group "$rg_name" \
+        --vnet-name "$vnet_name" \
+        --query '[].{Name:name, AddressPrefix:addressPrefix}' \
+        -o table
+}
+
+function lits_azvms() {
+    local rg_name="${1:-$AZURE_RESOURCE_GROUP}"
+
+    if [ -z "$rg_name" ]; then
+        echo "Usage: azvms <resource-group>"
+        echo "Or set AZURE_RESOURCE_GROUP in your environment."
+        return 1
+    fi
+
+    echo "Listing VMs in resource group: $rg_name"
+    az vm list \
+        --resource-group "$rg_name" \
+        --show-details \
+        --query '[].{
+            Name:name,
+            Location:location,
+            Size:hardwareProfile.vmSize,
+            PowerState:powerState,
+            PrivateIP:privateIps,
+            PublicIP:publicIps
+        }' \
+        -o table
+}
+
+function lits_azdisks() {
+    local rg_name="${1:-$AZURE_RESOURCE_GROUP}"
+
+    if [ -z "$rg_name" ]; then
+        echo "Usage: azdisks <resource-group>"
+        echo "Or set AZURE_RESOURCE_GROUP in your environment."
+        return 1
+    fi
+
+    echo "Listing Managed Disks in resource group: $rg_name"
+    az disk list \
+        --resource-group "$rg_name" \
+        --query '[].{Name:name, Location:location, SizeGB:diskSizeGb, SKU:sku.name, State:provisioningState}' \
+        -o table
+}
+
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- Azure aliases if az exists
+if command -v az >/dev/null 2>&1; then
+    alias azdisks=list_azdisks
+    alias azvms=list_azvms
+    alias azsubnets=list_azsubnets
+    alias azvnets=list_azvnets
+    alias azlogin=azlogin
+    alias azlogout=azlogout
+    alias azshow=azshow
+    alias azcontext=azcontext
+fi
+###############################################################################
+### Terraform Helper Functions
+### File: .bashrc.d/13-functions-terraform.sh
+### Purpose: 
+###   Simplify common Terraform operations and output for VAST on Cloud
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###############################################################################
+
+###--- Base Terraform directory
+# Use environment variable TF_VOC_BASE if set, otherwise fallback to default
+export VOC_BASE="${HOME}/Vast/vast_on_cloud}"
+
+###--- Terraform Apply/Destroy/Plan with all .tfvars in current dir
+tfapply() {
+    local var_files=(*.tfvars)
+    [[ ${#var_files[@]} -eq 0 ]] && { echo "No .tfvars files found."; return 1; }
+    terraform apply --auto-approve "${var_files[@]/#/-var-file=}"
+}
+
+tfdestroy() {
+    local var_files=(*.tfvars)
+    [[ ${#var_files[@]} -eq 0 ]] && { echo "No .tfvars files found."; return 1; }
+    terraform destroy --auto-approve "${var_files[@]/#/-var-file=}"
+}
+
+tfplan() {
+    local var_files=(*.tfvars)
+    [[ ${#var_files[@]} -eq 0 ]] && { echo "No .tfvars files found."; return 1; }
+    terraform plan "${var_files[@]/#/-var-file=}"
+}
+
+###--- Terraform Output Helpers
+tf_vms()      { local tf_dir="${1:-$VOC_BASE}"; terraform -chdir="$tf_dir" output -raw cluster_mgmt 2>/dev/null || echo "Error getting cluster_mgmt"; echo ""; }
+tf_vmsmon()   { local tf_dir="${1:-$VOC_BASE}"; terraform -chdir="$tf_dir" output -raw vms_monitor 2>/dev/null || echo "Error getting vms_monitor"; echo ""; }
+tf_vmsip()    { local tf_dir="${1:-$VOC_BASE}"; terraform -chdir="$tf_dir" output -raw vms_ip 2>/dev/null || echo "Error getting vms_ip"; echo ""; }
+
+tf_all() {
+    local tf_dir="${1:-$TF_VOC_BASE}"
+    echo "Cluster Management URL:"; tf_vms "$tf_dir"; echo ""
+    echo "Monitoring URL:"; tf_vmsmon "$tf_dir"; echo ""
+    echo "VMS IP Address:"; tf_vmsip "$tf_dir"; echo ""
+}
+
+tf_private_ips() {
+    local tf_dir="$VOC_BASE"
+    local ips_json count=1 prefix="ebox"
+    ips_json=$(terraform -chdir="$tf_dir" output -json private_ips 2>/dev/null) || { echo "Error getting private_ips"; return 1; }
+
+    local type=$(echo "$ips_json" | jq -r 'type')
+    if [[ "$type" == "string" ]]; then
+        printf "%-15s %s%02d\n" "$ips_json" "$prefix" "$count"
+    elif [[ "$type" == "array" ]]; then
+        for ip in $(echo "$ips_json" | jq -r '.[]'); do
+            printf "%-15s %s%02d\n" "$ip" "$prefix" "$count"
+            ((count++))
+        done
+    else
+        echo "Unexpected JSON type: $type" >&2
+        return 1
+    fi
+}
+
+###--- Terraform Utility Functions
+tfshow() { terraform output; }
+tfinit() { terraform init; }
+
+tfclean() {
+    echo "Removing .terraform dirs, tfstate files, and backups..."
+    find . -type d -name ".terraform" -exec rm -rf {} +
+    rm -f terraform.tfstate terraform.tfstate.backup
+    echo "Reinitializing Terraform..."
+    terraform init
+}
+
+tfclstate() {
+    echo "Removing tfstate files and backups (keeping .terraform)..."
+    rm -f terraform.tfstate terraform.tfstate.backup
+    terraform init
+}
+
+
+
+###=================================================================================================###
+###  Aliases
+###=================================================================================================###
+
+# --- Terraform / VoC aliases only if Terraform is installed
+if command -v terraform >/dev/null 2>&1; then
+
+    ###--- Terraform convenience aliases
+    alias tfclean='tfclean'
+    alias tfclstate='tfclstate'
+    alias tfinit='tfinit'
+    alias tfshow='tfshow'
+    alias tfapply='tfapply'
+    alias tfdestroy='tfdestroy'
+    alias tfplan='tfplan'
+
+    ###--- Output helper aliases
+    alias vms='tf_vms'
+    alias vmsmon='tf_vmsmon'
+    alias vmsip='tf_vmsip'
+    alias eboxips='tf_private_ips'
+
+    # VAST Terraform / VoC shortcuts
+    alias vasttf="cd ${VASTTF_ROOT}"          # VAST Terraform root
+    alias vocdir="cd ${TFDIR}/vast_on_cloud/5_3"
+    alias vastdir="cd ${VASTTF_ROOT}"
+    alias cluster01="cd ${VASTGCP}/cluster01"
+    alias cluster02="cd ${VASTGCP}/cluster02"
+    alias cluster03="cd ${VASTGCP}/cluster03"
+
+    # Optional VoC scripts
+    alias install_vast01="${HOME}/bin/vast.voc.install.py"
+    alias pgpsecrets="${HOME}/Terraform/scripts/vast.extracts3secret.sh"
+    alias vmsstat="${HOME}/bin/vms.status.py"
+fi###=================================================================================================###
+### Bash Aliases and Productivity Helpers
+### File: .bashrc.d/20-set-aliases.sh
+### Purpose: 
+###   Load Linux productivity, VoC, Terraform, and cloud SDK aliases
+###   All aliases are loaded only if the corresponding tools exist
+### Created by Karl Vietmeier
+### License: Apache 2.0
+###=================================================================================================###
+
+# include user-defined aliases if present
+load_aliases() {
+    # --- Desktop Notifications for long-running commands
+    alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" \
+      "$(history | tail -n1 | sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
+    # --- Refresh .bashrc
+    alias dotbash=". ${HOME}/.bashrc"
+    
+    # --- List functions
+    alias shwf="declare -F"
+
+    # --- Smarter ls commands
+    alias ls='ls -hF --color=auto'
+    alias l='ls -CFv'
+    alias la='ls -Av'
+    alias ll='ls -lhvF --group-directories-first'
+    alias lla='ls -alhvF --group-directories-first'
+
+    # --- Grep with colors
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+
+    # --- Git helpers
+    alias gitsync="${HOME}/bin/git-sync.sh"
+    alias gpush="${HOME}/bin/git-sync.sh push"
+    alias gpull="${HOME}/bin/git-sync.sh pull"
+    alias gstat="${HOME}/bin/git-sync.sh status"
+
+    # --- Quick directory navigation
+    alias cdb='cd -'
+    alias up='cd ..'
+    alias up2='cd ../..'
+    alias up3='cd ../../..'
+
+    # --- Disk usage
+    alias df='df -kh'
+    alias du='du -h'
+
+    # Utlities for getting public IP
+    alias myip=get_my_ip
+
+    # --- Include user-defined aliases if present
+    [ -f "${HOME}/.bash_aliases" ] && . "${HOME}/.bash_aliases"
+}
+
+# Call the function automatically on shell startup
+load_aliases
