@@ -24,7 +24,6 @@ export GCP_DEFAULT_PROJECT=
 
 
 ###--- Azure environment variables
-### Assumes environment variables are set in .bash_environment or manually:
 export AZURE_CLIENT_ID=
 export AZURE_CLIENT_SECRET=
 export AZURE_TENANT_ID=

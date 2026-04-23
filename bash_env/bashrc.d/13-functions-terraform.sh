@@ -1,15 +1,15 @@
-###############################################################################
+###===============================================================================================###
 ### Terraform Helper Functions
 ### File: .bashrc.d/13-functions-terraform.sh
 ### Purpose: 
 ###   Simplify common Terraform operations and output for VAST on Cloud
 ### Created by Karl Vietmeier
 ### License: Apache 2.0
-###############################################################################
+###===============================================================================================###
 
 ###--- Base Terraform directory
 # Use environment variable TF_VOC_BASE if set, otherwise fallback to default
-export VOC_BASE="${HOME}/Vast/vast_on_cloud}"
+export VOC_BASE="${HOME}/Vast/vast_on_cloud"
 
 ###--- Terraform Apply/Destroy/Plan with all .tfvars in current dir
 tfapply() {

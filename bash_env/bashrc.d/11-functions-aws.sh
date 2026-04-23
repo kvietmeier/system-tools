@@ -164,7 +164,7 @@ fi
 ###--- Check AWS SSO Login Status (Dynamic, Skip Key Profiles)
 aws_check_all_profiles() {
     local profiles
-    profiles=($(grep '^\[profile ' ~/.aws/config 2>/dev/null | sed -E 's/^\[profile (.+)\]/\1/'))
+    profiles=($(aws configure list-profiles 2>/dev/null))
 
     if [ ${#profiles[@]} -eq 0 ]; then
         echo "No AWS profiles found."
