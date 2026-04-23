@@ -1,6 +1,8 @@
-### .bash_environment
-# This file is sourced by .bashrc and .profile 
-# Put environment variables here that you want set in all your bash sessions
+###==================================================================================###
+# .bash_environment
+#   This file is sourced by scripts in .bashrc.d
+#   Put environment variables here that you want set in all your bash sessions
+###==================================================================================###
 
 ###--- VAST environment variables
 export VMS_USER=
@@ -14,7 +16,7 @@ export VMS_ADDRESS=vms
 #export AWS_DEFAULT_REGION=your-default-region
 
 # Set the default AWS profile
-export AWS_PROFILE=AWS-POC-VOC-Cluster
+export AWS_PROFILE=
 
 ###--- GCP environment variables
 export GOOGLE_APPLICATION_CREDENTIALS=

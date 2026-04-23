@@ -18,6 +18,4 @@ unset rc
 # Optional local overrides
 [ -f ~/.bashrc.local ] && . ~/.bashrc.local
 
-export PATH=/home/karlv/bin:$PATH
-
 [[ -e "/home/karlv/lib/oracle-cli/lib/python3.12/site-packages/oci_cli/bin/oci_autocomplete.sh" ]] && source "/home/karlv/lib/oracle-cli/lib/python3.12/site-packages/oci_cli/bin/oci_autocomplete.sh"

@@ -1,6 +1,6 @@
 [user]
-	name = 
-	email = 
+	name = <insert-name-here>
+	email = <insert-email-here>
 [core]
 	editor = vim
 	autocrlf = input
