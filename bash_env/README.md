@@ -16,22 +16,17 @@ This repository contains my personal Bash environment setup for WSL and Linux De
 The bashrc files in **server_bashrc_files** are standalone files that you can drop onto a cloud or lab server that will set the prompt you see above and other useful aliases and settings like `set -o vi`.
 
 ---
-### How it works - 
+### How it works - WARNING - This will overwrite your existing environment so be careful.
 ---
 
 This environment is designed to be highly portable using a set of custom synchronization scripts:
 
-1. **`git_setup.sh` / `git_clone.sh`**: Use these to bootstrap Git and pull down this repository onto a fresh machine.
-2. **`update_repo.sh`**: Run this on your active workstation when you make changes to your environment. It automatically copies your active `~/.bashrc.d` and dotfiles into the local Git repository while **stripping out personal details and cloud secrets** (like Azure Client IDs and GCP credentials) from `bash_environment` and `gitconfig`.
-3. **`rehydrate_repo.sh`**: Run this immediately after cloning the repository onto a brand-new WSL distro or cloud VM. It instantly deploys the repository files into your new home directory, securely adding the required `.` prefixes to hide the dotfiles and configuring directory permissions. 
-4. **`install_cloud_sdks.sh`**: A cross-platform deployment script that automatically detects your OS package manager (`apt`, `dnf`, `yum`) and installs the cloud toolchains (AWS CLI, Azure CLI, gcloud, OCI, Terraform, and Asciinema).
+1. **`git_setup.sh` / `git_clone.sh`**: Bootstrap Git and clone your repos on a new machine.
+2. **`git_sync.sh`**: Will loop through a list of local repos amd do a "pull" on all of them - use to update your laptop when you go on the road
+3. **`update_repo.sh`**: If you want to backup your own config - run this on your active workstation when you make changes to your environment. It automatically copies your active `~/.bashrc.d` and dotfiles into the local Git repository while **stripping out personal details and cloud secrets** (like Azure Client IDs and GCP credentials) from `bash_environment` and `gitconfig`.
+4. **`rehydrate_repo.sh`**: Run this immediately after cloning the repository onto a brand-new WSL distro or cloud VM. It instantly deploys the repository files into your new home directory, securely adding the required `.` prefixes to hide the dotfiles and configuring directory permissions. 
+5. **`install_cloud_sdks.sh`**: A cross-platform deployment script that automatically detects your OS package manager (`apt`, `dnf`, `yum`) and installs the cloud toolchains (AWS CLI, Azure CLI, gcloud, OCI, Terraform, and Asciinema).
 
-
----
-### Files
----
-
-`
 ---
 ### Files
 ---
