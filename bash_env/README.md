@@ -1,4 +1,4 @@
-## Bash Environment Setup (WSL/Linux DevOps)
+## Bash Environment Setup (WSL/Linux DevOps [not tested on MacOS])
 
 This repository contains my personal Bash environment setup for WSL and Linux DevOps workstations. It includes custom Bash configurations, aliases, functions, and other development utilities to streamline cloud and infrastructure workflows.
 
