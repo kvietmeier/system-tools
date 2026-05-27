@@ -1,43 +1,24 @@
 #!/bin/bash
 # ==============================================================================
 # Usage:
-#   ./git_clone.sh <repo_list_file>
-#
-# Example:
-#   ./git_clone.sh repos.txt
+#    ./git_clone.sh <repo_list_file>
 #
 # Description:
-#   Clones all Git repos listed in the provided file into ~/projects.
+#    Parses a tagged repo file, filters based on the current OS environment,
+#    and roots work vs personal repos into their correct folders.
 # ==============================================================================
 
 set -euo pipefail
 
-PROJECTS_DIR="${HOME}/projects"
-TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+# Define Mac-aware Root Directories
+PERSONAL_DIR="${HOME}/repos"
+WORK_DIR="${HOME}/repos-vast"
 
 # --- Functions ---------------------------------------------------------------
 
-install_git() {
-    if command -v dnf &> /dev/null; then
-        echo "Detected DNF package manager. Installing Git..."
-        sudo dnf install -y git
-    elif command -v apt &> /dev/null; then
-        echo "Detected APT package manager. Installing Git..."
-        sudo apt update
-        sudo apt install -y git
-    else
-        echo "Unsupported package manager. Please install Git manually."
-        exit 1
-    fi
-}
-
-prepare_projects_dir() {
-    if [ ! -d "$PROJECTS_DIR" ]; then
-        echo "Creating projects directory at $PROJECTS_DIR..."
-        mkdir -p "$PROJECTS_DIR"
-    else
-        echo "Using existing projects directory at $PROJECTS_DIR..."
-    fi
+ensure_target_directories() {
+    mkdir -p "$PERSONAL_DIR"
+    mkdir -p "$WORK_DIR"
 }
 
 clone_repos_from_file() {
@@ -50,30 +31,60 @@ clone_repos_from_file() {
 
     echo "Processing repositories from $repo_list_file..."
 
-    while IFS= read -r repo_url; do
-        # Skip blank lines and comments
-        [[ -z "$repo_url" || "$repo_url" =~ ^# ]] && continue
+    while read -r target_tag repo_url; do
+        # 1. Skip blank lines and comments
+        [[ -z "$target_tag" || "$target_tag" =~ ^# ]] && continue
+        [[ -z "$repo_url" ]] && continue
 
-        # Extract repo name (strip trailing .git if present)
+        # 2. Environment Filtering Check (Mac gets All + Linux)
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # On Mac, explicitly drop Windows repos, allow all others
+            if [[ "$target_tag" == "windows" ]]; then
+                echo "箱 Skip: Skipping Windows repo on macOS architecture: $(basename "$repo_url")"
+                continue
+            fi
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            # On Linux, skip Windows-specific repos
+            if [[ "$target_tag" == "windows" ]]; then
+                echo "⏭️  Skipping Windows repo on Linux: $(basename "$repo_url")"
+                continue
+            fi
+        fi
+
+        # 3. Determine Target Location based on Hosting Platform
+        if [[ "$repo_url" == *"gitlab"* ]] || [[ "$repo_url" == *"vastdata"* ]]; then
+            TARGET_ROOT="$WORK_DIR"
+            IDENTITY_EMAIL="karl.vietmeier@vastdata.com"
+            CONTEXT="[WORK]"
+        else
+            TARGET_ROOT="$PERSONAL_DIR"
+            IDENTITY_EMAIL="karlv@storagenet.org"
+            CONTEXT="[PERSONAL]"
+        fi
+
+        # 4. Extract Repo Name
         repo_name=$(basename "$repo_url")
         repo_name="${repo_name%.git}"
-        repo_path="${PROJECTS_DIR}/${repo_name}"
+        repo_path="${TARGET_ROOT}/${repo_name}"
 
+        # 5. Check and Clone
         if [ -d "$repo_path/.git" ]; then
-            echo "Skipping existing repo: $repo_name"
+            echo "$CONTEXT Skipping existing repo: $repo_name"
         else
-            echo "Cloning: $repo_url"
-            git -C "$PROJECTS_DIR" clone "$repo_url"
+            echo "$CONTEXT Cloning $repo_name into $TARGET_ROOT..."
+            git -C "$TARGET_ROOT" clone "$repo_url"
+            
+            # 6. Apply local identity tracking
+            git -C "$repo_path" config user.email "$IDENTITY_EMAIL"
+            echo "   Mapped local identity -> $IDENTITY_EMAIL"
         fi
 
     done < "$repo_list_file"
 }
 
-
 # --- Main --------------------------------------------------------------------
 
 main() {
-
     if [ $# -lt 1 ]; then
         echo "Usage: $0 <repo_list_file>"
         exit 1
@@ -82,15 +93,14 @@ main() {
     local repo_file="$1"
 
     if ! command -v git &> /dev/null; then
-        install_git
-    else
-        echo "Git is already installed: $(git --version)"
+        echo "Git missing. Please ensure Git is configured before cloning."
+        exit 1
     fi
 
-    prepare_projects_dir
+    ensure_target_directories
     clone_repos_from_file "$repo_file"
 
-    echo -e "\nGit clone complete!"
+    echo -e "\n🎉 Git environment cloning routine complete!"
 }
 
 main "$@"
