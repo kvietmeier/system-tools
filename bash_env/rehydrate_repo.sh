@@ -3,8 +3,11 @@
 # Run this on a NEW server to deploy configurations from this repo to the home directory
 
 REPO_DIR="$(pwd)"
+LINUX_DIR=${REPO_DIR}/linux
+COMMON_DIR=${REPO_DIR}/common
+DARWIN_DIR=${REPO_DIR}/darwin
 
-echo "💧 Rehydrating environment from $REPO_DIR to $HOME..."
+echo "Rehydrating environment from $REPO_DIR to $HOME..."
 
 # Files to copy to the home directory (adding the dot prefix)
 FILES=(
@@ -18,14 +21,20 @@ FILES=(
 )
 
 for file in "${FILES[@]}"; do
-    if [ -f "$REPO_DIR/$file" ]; then
-        cp "$REPO_DIR/$file" "$HOME/.$file"
-        echo "  Deployed $file -> ~/.$file"
+    if [ -f "${COMMON_DIR}/${file}" ]; then
+      cp ${COMMON_DIR}/${file} ${HOME}/.${file}
+      echo "  Deployed $file -> ${HOME}/.$file"
     fi
 done
 
+# hack to copy .bashrc
+#if [ -f "${LINUX_DIR}/bashrc" ]; then
+#   cp ${LINUX_DIR}/bashrc ${HOME}/.bashrc
+#fi
+   
+
 # Directories to copy to the home directory (adding the dot prefix)
-for dir in "bashrc.d" "ssh"; do
+for dir in "bashrc.d.linux" "ssh"; do
     if [ -d "$REPO_DIR/$dir" ]; then
         cp -r "$REPO_DIR/$dir" "$HOME/.$dir"
         echo "  Deployed $dir/ -> ~/.$dir/"
