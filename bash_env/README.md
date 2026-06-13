@@ -1,17 +1,18 @@
 ## Bash Environment Setup (WSL/Linux DevOps [not tested on MacOS])
 
-This repository contains my personal Bash environment setup for WSL and Linux DevOps workstations. It includes custom Bash configurations, aliases, functions, and other development utilities to streamline cloud and infrastructure workflows.
+This repository contains my personal Bash environment setup for WSL and Linux DevOps workstations/servers. It includes custom Bash configurations, aliases, functions, and other development utilities to streamline cloud and infrastructure workflows.
 
-  * Designed for WSL and Linux DevOps environments.
-  * Modular `.bashrc.d/` directory makes it easy to extend and maintain functions.
-  * Works seamlessly with cloud providers (AWS, GCP, Azure, OCI) and Terraform workflows.
-  * Includes light and dark terminal color schemes.
-  * Has settings for `ssh/config` for lab use and proxy tunneling.
-  * You get a prompt that dynamically identifies where the host you are logged into is running:
-    ```shell
-    karlv@ghostcanyon [WSL] :~$
-    karlv@devops01 [GCP] :~$
-    ```
+* Designed for WSL and Linux DevOps environments.
+* Modular `.bashrc.d/` directory makes it easy to extend and maintain functions.
+* Works seamlessly with cloud providers (AWS, GCP, Azure, OCI) and Terraform workflows.
+* Includes light and dark terminal color schemes.
+* Has settings for `ssh/config` for lab use and proxy tunneling.
+* You get a prompt that dynamically identifies where the host you are logged into is running:
+  
+  ```shell
+  karlv@ghostcanyon [WSL] :~$
+  karlv@devops01 [GCP] :~$
+  ```
 
 The bashrc files in **server_bashrc_files** are standalone files that you can drop onto a cloud or lab server that will set the prompt you see above and other useful aliases and settings like `set -o vi`.
 
