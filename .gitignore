@@ -4,6 +4,7 @@
 
 # exclude the ignore file
 .gitignore
+.gitattributes
 
 # =======================
 # OS artifacts
@@ -27,13 +28,7 @@ Thumbs.db
 # Private/proprietary
 # =======================
 /Private/
-
-# =======================
-# Terraform state / build dirs
-# =======================
-*.tfstate
-*.tfstate.backup
-.terraform/
+bash_environment
 
 # =======================
 # Large files
