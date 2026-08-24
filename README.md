@@ -13,21 +13,21 @@ A modular Bash environment customized for **macOS Apple Silicon (Darwin)** with 
 To install, place the main entry points in your `$HOME` directory and modularize configurations inside `~/.bashrc.d/`:
 
 ```text
-~/.bash_environment         # Private/Sensitive local variables (git-ignored)
-~/.bashrc                  # Main shell initialization file
+~/.bash_environment               # Private/Sensitive local variables (git-ignored)
+~/.bashrc                         # Main shell initialization file
 ~/.bashrc.d/
-├── 01-set-env_variables.sh  # Paths, Homebrew, and Environment Tagging
-├── 02-terminal-settings.sh # History, Prompt (PS1), terminal titles
-├── 03-functions-utility.sh # IP lookup, browser isolation, asciinema logging
-├── 04-terminal-mux.sh      # Tmux and Screen aliases
-├── 05-functions-vast.sh    # VAST Cloud & Polaris context management
-├── 10-gcp-functions.sh     # GCP IAM, ADC authentication, and profiles
-├── 11-gcp-utilities.sh     # GCP Compute, VPC, and Route management
-├── 11-functions-aws.sh     # AWS SSO authentication and VAST context syncing
-├── 12-functions-azure.sh   # Azure Service Principal auth & resource listing
-├── 13-functions-tf.sh      # Terraform shortcut wrappers and state cleaning
-├── session-tools.sh        # iTerm2 log cleanup, archiving, and compression
-└── 20-set-aliases.sh       # Core GNU aliases, navigation, and shortcuts
+├── 01-set-env_variables.sh       # Paths, Homebrew, and Environment Tagging
+├── 02-terminal-settings.sh       # History, Prompt (PS1), terminal titles
+├── 03-functions-utility.sh       # IP lookup, browser isolation, asciinema logging
+├── 04-terminal-mux.sh            # Tmux and Screen aliases
+├── 05-vastcloud-functions.sh     # VAST Cloud & Polaris context management
+├── 10-gcp-functions.sh           # GCP IAM, ADC authentication, and profiles
+├── 11-gcp-utilities.sh           # GCP Compute, VPC, and Route management
+├── 12-aws-functions.sh           # AWS SSO authentication and VAST context syncing
+├── 13-azure-functions.sh         # Azure Service Principal auth & resource listing
+├── 14-terraform-utilities.sh     # Terraform shortcut wrappers and state cleaning
+├── 15-iterm-session-tools.sh     # iTerm2 log cleanup, archiving, and compression
+└── 20-set-aliases.sh             # Core GNU aliases, navigation, and shortcuts
 ```
 
 ---
