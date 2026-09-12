@@ -1,85 +1,111 @@
 ###=====================================================================================###
 #
-# OpenSSH configuration file for Windows 10/11
-# - Will work with Linux/OS X as well - but ncat won't be required for SOCKS.
-#
+# OpenSSH configuration example (macOS / Linux)
+# Copy to ~/.ssh/config and fill in placeholders.
 # https://www.ssh.com/academy/ssh/config
-#  
-#  To use a SOCKs Proxy w/Windows:
-#  - Install nmap
-#  -> Due to a bug in ncat 7.9# you will need to install 7.80 instead.
-#  -> You will also need the whole nmap install otherwise you will be missing
-#     libraries.
-#   https://nmap.org/
-#   https://nmap.org/dist
 #
-#   Installer for 7.8
-#   https://nmap.org/dist/nmap-7.80-setup.exe
+# Notes:
+# - Host blocks above Host * inherit/override; put specific hosts first.
+# - Wildcard Host patterns (labclient*, ws*) share common settings.
+# - StrictHostKeyChecking no + empty known_hosts is intentional for ephemeral lab VMs.
 #
 ###=====================================================================================###
 
 ###=====================================================================================###
-#       Aliases 
+#        Home Lab Aliases
 ###=====================================================================================###
-
-Host devops01
-    HostName <insert-ip-here>
-    User <insert-user-here>
-    PasswordAuthentication no
-
-
-###=====================================================================================###
-#                         Aliases for AWS using key file
-###=====================================================================================###
-
-# Linux
-Host target
-    HostName <insert-ip-here>
-    User ubuntu
-    IdentityFile ~/.ssh/aws.pem
-    PasswordAuthentication no
-
-# Windows
-Host source
-    HostName <insert-ip-here>
-    User ubuntu
-    IdentityFile C:\Users\USER\.ssh\aws.pem
+Host ghost
+    HostName <lab-gateway-ip>
+    User <local-user>
+    ForwardX11 yes
     PasswordAuthentication no
 
 ###=====================================================================================###
-
+#        Git Forge Alias (GitLab / GitHub Enterprise style)
+###=====================================================================================###
+Host git.example.com
+    HostName git.example.com
+    User git
+    IdentityFile ~/.ssh/ed25519_gitlab
+    IdentitiesOnly yes
 
 ###=====================================================================================###
-###              Entries using ncat to tunnel through a SOCKS proxy
+#        Lab Aliases
 ###=====================================================================================###
 
-### Linux / WSL / macOS
-# Host vm02-socks
-#     HostName vm02.westus2.cloudapp.azure.com
-#     ProxyCommand nc -X 5 -x proxy-us.intel.com:1080 %h %p
-#     User azureuser
+###--- Standard Linux Clients
+Host labclient01
+    HostName <lab-client-01-ip>
+
+Host labclient02
+    HostName <lab-client-02-ip>
+
+Host labclient03
+    HostName <lab-client-03-ip>
+
+# Common settings for the labclient* pattern
+Host labclient*
+    User labuser
+    IdentityFile ~/.ssh/admin_keys/labkey
+    ForwardX11 yes
+    PasswordAuthentication no
+
+###--- Windows SSH Servers
+Host ws2019
+    HostName <windows-2019-ip>
+
+Host ws2022
+    HostName <windows-2022-ip>
+
+Host ws2025
+    HostName <windows-2025-ip>
+
+# Common settings for the ws* pattern (includes ControlMaster multiplexing)
+Host ws*
+    User Administrator
+    IdentityFile ~/.ssh/id_ed25519
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h:%p
+    ControlPersist 15m
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+
+###=====================================================================================###
+#        Cloud / AWS aliases using a key file
+###=====================================================================================###
+Host aws01
+    HostName <aws-private-or-public-ip>
+    User labuser
+    IdentityFile ~/.ssh/admin_keys/cloudkey.pem
+    ForwardX11 yes
+    PasswordAuthentication no
+
+###=====================================================================================###
+#        Optional: SOCKS proxy jump (uncomment and edit)
+###=====================================================================================###
+# macOS / Linux:
+# Host vm-via-socks
+#     HostName <target-host>
+#     ProxyCommand nc -X 5 -x <socks-proxy-host>:1080 %h %p
+#     User <remote-user>
+#     PasswordAuthentication no
+#
+# Windows (nmap ncat):
+# Host vm-via-socks
+#     HostName <target-host>
+#     ProxyCommand "C:\Program Files (x86)\nmap\ncat.exe" --proxy-type socks5 --proxy <socks-proxy-host>:1080 %h %p
+#     User <remote-user>
 #     PasswordAuthentication no
 
-### Windows
-# Host vm02-socks
-#     HostName vm02.westus2.cloudapp.azure.com
-#     ProxyCommand "C:\Program Files (x86)\nmap\ncat.exe" --proxy-type socks5 --proxy proxy-us.intel.com:1080 %h %p
-#     User azureuser
-#     PasswordAuthentication no
-  
-
 ###=====================================================================================###
-#                         Common Settings for all SSH targets            
+#        Common settings for all SSH targets
 ###=====================================================================================###
-
 Host *
-  # Effect is to not populate the known_hosts file every time you connect to a new server
-  UserKnownHostsFile /dev/null
-  # Don't verify that the the key matches a known_host - useful when you rebuild hosts frequently
-  StrictHostKeyChecking no
-  IdentitiesOnly no
-  LogLevel FATAL
-  ForwardX11 yes
-  ForwardAgent yes
-  # Send a null packet every 120s
-  ServerAliveInterval 120
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    IdentitiesOnly yes
+    PKCS11Provider none
+    ServerAliveInterval 120
+    LogLevel ERROR
+
+# Create the ControlMaster socket directory once:
+#   mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets
