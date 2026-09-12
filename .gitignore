@@ -1,0 +1,73 @@
+###====================================================================================###
+###    Stuff to exclude from the remote repo
+###====================================================================================###
+
+# exclude the ignore file
+.gitignore
+.gitattributes
+
+# =======================
+# OS artifacts
+# =======================
+.DS_Store
+Thumbs.db
+
+# =======================
+# Logs and temp files
+# =======================
+*.log
+*.tmp
+*.bak
+*.bkp
+*.swp
+*~
+[Tt]emp/
+*[Ss]cratch*
+
+# =======================
+# Private/proprietary
+# =======================
+/Private/
+bash_environment
+bash_environment.sh
+**/.bash_environment
+**/.bash_environment.sh
+
+# =======================
+# Credentials & private keys (never commit)
+# =======================
+# Nested/legacy SSH key material
+**/.ssh/
+**/id_rsa
+**/id_rsa.pub
+**/id_ed25519
+**/id_ed25519.pub
+**/id_ecdsa
+**/id_ecdsa.pub
+**/id_dsa
+**/id_dsa.pub
+*.pem
+*.ppk
+*.p12
+*.pfx
+*.key
+!**/header_template.sh
+# Cloud / ADC style credential files
+**/application_default_credentials.json
+**/*credentials*.json
+**/*-key.json
+**/.sa-key.json
+**/service-account*.json
+# Tokens / env dumps
+**/token.txt
+**/.env
+**/.env.*
+!**/.env.example
+
+# =======================
+# Large files
+# =======================
+*.iso
+*.vhdx
+*.vhd
+*.zip
