@@ -65,7 +65,7 @@ This environment is designed to be highly portable using a set of custom synchro
 
 1. **`git_setup.sh` / `git_clone.sh`**: Bootstrap Git and clone your repos on a new machine.
 2. **`git_sync.sh`**: Will loop through a list of local repos amd do a "pull" on all of them - use to update your laptop when you go on the road
-3. **`update_repo.sh`**: If you want to backup your own config - run this on your active workstation when you make changes to your environment. It automatically copies your active `~/.bashrc.d` and dotfiles into the local Git repository while **stripping out personal details and cloud secrets** (like Azure Client IDs and GCP credentials) from `bash_environment.sh` and `gitconfig`.
+3. **`update_repo.sh`**: Backup active workstation config into this repo. **Default** copies `~/.bashrc.d` → `bashrc.d.darwin/` or `bashrc.d.linux/` (detected from OS). Pass **`--all`** to also sync shared dotfiles into `common/`, scrubbing secrets from `bash_environment` and personal info from `gitconfig`.
 4. **`rehydrate_repo.sh`**: Run this immediately after cloning the repository onto a brand-new WSL distro or cloud VM. It instantly deploys the repository files into your new home directory, securely adding the required `.` prefixes to hide the dotfiles and configuring directory permissions. 
 5. **`install_cloud_sdks_universal.sh`**: Universal bootstrap for macOS and Linux. Detects Homebrew vs `apt` / `dnf` / `yum` and installs AWS CLI, Azure CLI, gcloud, OCI CLI, Terraform, and Asciinema (plus `wslu` on WSL).
 
@@ -92,7 +92,7 @@ bash_env/
 │  ├─ git_clone.sh           # Script to pull down repositories
 │  ├─ git_sync.sh            # Custom Git workflow script (powers gpull, gpush, gstat)
 │  ├─ install_cloud_sdks_universal.sh  # Bootstraps AWS, Azure, GCP, OCI, Terraform (macOS + Linux)
-│  ├─ update_repo.sh         # Secures and syncs active dotfiles into the Git repository
+│  ├─ update_repo.sh         # Sync ~/.bashrc.d → bashrc.d.{darwin|linux}; --all for common/
 │  └─ rehydrate_repo.sh      # Deploys configurations from the repo to a new machine
 │
 ├─ server_bashrc_files/  # Drop-in ~/.bashrc for cloud/lab VMs

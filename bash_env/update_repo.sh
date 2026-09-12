@@ -1,27 +1,89 @@
 #!/bin/bash
 ###############################################################################
 ##### File: update_repo.sh
-##### Purpose: Syncs active home directory configurations (dotfiles) into 
-#####          a local Git repository. Scrubs sensitive cloud credentials 
-#####          and personal Git info before copying. Prevents directory nesting.
-##### Usage: ./update_repo.sh [target_repo_directory]
-#####        (Defaults to ~/projects/scripts/bash_env if no argument is given)
+##### Purpose: Sync active workstation config into this bash_env repo.
+#####          Default: copy ~/.bashrc.d -> bashrc.d.{darwin|linux}
+#####          --all:   also copy shared dotfiles into common/ (secrets scrubbed)
+##### Usage: ./update_repo.sh [--all] [target_repo_directory]
+#####        (Defaults to this script's directory)
 ##### Created by Karl Vietmeier
-##### License: Licensed under the Apache License, Version 2.0 (the "License");
-#####          You may obtain a copy of the License at 
-#####          http://www.apache.org/licenses/LICENSE-2.0
+##### License: Apache 2.0
 ###############################################################################
 
+set -euo pipefail
 
-REPO_DIR="${1:-$HOME/projects/scripts/bash_env}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SYNC_ALL=0
+REPO_DIR="$SCRIPT_DIR"
 
-echo "🔄 Syncing active dotfiles to Git repository at $REPO_DIR..."
+usage() {
+    cat <<'EOF'
+Usage: ./update_repo.sh [--all] [target_repo_directory]
+
+  (default)  Sync ~/.bashrc.d into bashrc.d.darwin or bashrc.d.linux
+  --all      Also sync shared dotfiles into common/ (sanitized)
+
+Target defaults to this script's directory.
+EOF
+}
+
+# Parse args: optional --all and optional repo path (either order)
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --all)
+            SYNC_ALL=1
+            ;;
+        -*)
+            echo "Unknown option: $arg" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            REPO_DIR="$arg"
+            ;;
+    esac
+done
+
+case "$(uname -s)" in
+    Darwin) PLATFORM_DIR="bashrc.d.darwin" ;;
+    Linux)  PLATFORM_DIR="bashrc.d.linux" ;;
+    *)
+        echo "Unsupported OS: $(uname -s)" >&2
+        exit 1
+        ;;
+esac
+
+if [ ! -d "$HOME/.bashrc.d" ]; then
+    echo "No ~/.bashrc.d found — nothing to sync." >&2
+    exit 1
+fi
+
 mkdir -p "$REPO_DIR"
+TARGET_BASHRC_D="$REPO_DIR/$PLATFORM_DIR"
+
+echo "🔄 Syncing ~/.bashrc.d -> $TARGET_BASHRC_D/"
+rm -rf "$TARGET_BASHRC_D"
+mkdir -p "$TARGET_BASHRC_D"
+cp -R "$HOME/.bashrc.d/." "$TARGET_BASHRC_D/"
+echo "  ✅ bashrc.d sync complete ($PLATFORM_DIR)"
+
+if [ "$SYNC_ALL" -eq 0 ]; then
+    echo "Done (bashrc.d only). Use --all to also sync common/dotfiles."
+    exit 0
+fi
 
 # ---------------------------------------------------------
-# STANDARD EXPORT: Copy basic config files
+# --all: shared dotfiles into common/
 # ---------------------------------------------------------
-# List of standard dotfiles to copy directly (removed bash_environment.sh and gitconfig)
+COMMON_DIR="$REPO_DIR/common"
+mkdir -p "$COMMON_DIR"
+
+echo "🔄 Syncing shared dotfiles -> $COMMON_DIR/ (--all)"
+
 FILES=(
     "bash_aliases"
     "bashrc"
@@ -30,18 +92,14 @@ FILES=(
     "vimrc"
 )
 
-# Copy standard files and strip the leading dot
 for file in "${FILES[@]}"; do
     if [ -f "$HOME/.$file" ]; then
-        cp "$HOME/.$file" "$REPO_DIR/$file"
-        echo "  Copied ~/.$file -> $REPO_DIR/$file"
+        cp "$HOME/.$file" "$COMMON_DIR/$file"
+        echo "  Copied ~/.$file -> common/$file"
     fi
 done
 
-# ---------------------------------------------------------
-# SECURE EXPORT: Stub out .bash_environment.sh secrets
-# ---------------------------------------------------------
-# Define your list of sensitive variables here for easy updating.
+# Scrub secrets from ~/.bash_environment.sh
 SENSITIVE_VARS_LIST=(
     "VMS_USER"
     "VMS_PASSWORD"
@@ -55,44 +113,23 @@ SENSITIVE_VARS_LIST=(
     "VASTDATA_[A-Z_]+"
     "TF_VAR_[A-Z_]+"
 )
-
-# Join the array into a single regex pattern separated by pipes (|)
 SENSITIVE_PATTERN=$(IFS='|'; echo "${SENSITIVE_VARS_LIST[*]}")
 
 if [ -f "$HOME/.bash_environment.sh" ]; then
-    echo "  🔒 Sanitizing and copying ~/.bash_environment.sh -> $REPO_DIR/bash_environment.sh"
-    
-    # Use sed to find sensitive 'export VAR=value' lines and strip everything after the '='.
-    sed -E "s/^(export ($SENSITIVE_PATTERN))=.*/\1=/" "$HOME/.bash_environment.sh" > "$REPO_DIR/bash_environment.sh"
+    echo "  🔒 Sanitizing ~/.bash_environment.sh -> common/bash_environment"
+    sed -E "s/^(export ($SENSITIVE_PATTERN))=.*/\1=/" \
+        "$HOME/.bash_environment.sh" > "$COMMON_DIR/bash_environment"
+elif [ -f "$HOME/.bash_environment" ]; then
+    echo "  🔒 Sanitizing ~/.bash_environment -> common/bash_environment"
+    sed -E "s/^(export ($SENSITIVE_PATTERN))=.*/\1=/" \
+        "$HOME/.bash_environment" > "$COMMON_DIR/bash_environment"
 fi
 
-# ---------------------------------------------------------
-# SECURE EXPORT: Stub out .gitconfig user details
-# ---------------------------------------------------------
+# Scrub git user identity
 if [ -f "$HOME/.gitconfig" ]; then
-    echo "  🔒 Sanitizing and copying ~/.gitconfig -> $REPO_DIR/gitconfig"
-    
-    # Use sed to replace the name and email values with placeholder stubs
-    sed -E 's/^[[:space:]]*name[[:space:]]*=.*/\tname = <insert-name-here>/; s/^[[:space:]]*email[[:space:]]*=.*/\temail = <insert-email-here>/' "$HOME/.gitconfig" > "$REPO_DIR/gitconfig"
+    echo "  🔒 Sanitizing ~/.gitconfig -> common/gitconfig"
+    sed -E 's/^[[:space:]]*name[[:space:]]*=.*/\tname = <insert-name-here>/; s/^[[:space:]]*email[[:space:]]*=.*/\temail = <insert-email-here>/' \
+        "$HOME/.gitconfig" > "$COMMON_DIR/gitconfig"
 fi
 
-# ---------------------------------------------------------
-# DIRECTORY SYNC: Copy directories, strip dots, and prevent nesting
-# ---------------------------------------------------------
-# SSH has been completely removed; only syncing bashrc.d
-for dir in "bashrc.d"; do
-    if [ -d "$HOME/.$dir" ]; then
-        echo "  📦 Syncing directory ~/.$dir/ -> $REPO_DIR/$dir/"
-        
-        # 1. Wipe the old repo directory to ensure a completely clean slate
-        rm -rf "$REPO_DIR/$dir"
-        
-        # 2. Create the brand new target directory explicitly without the dot
-        mkdir -p "$REPO_DIR/$dir"
-        
-        # 3. Use the "/." trick to copy ONLY the contents into the new dot-less folder.
-        cp -r "$HOME/.$dir/." "$REPO_DIR/$dir/"
-    fi
-done
-
-echo "✅ Update complete. Your secrets and personal info are safe from Git!"
+echo "✅ Update complete. Secrets/personal info scrubbed from common/ exports."
