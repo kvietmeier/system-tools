@@ -61,7 +61,7 @@ This environment is designed to be highly portable using a set of custom synchro
 2. **`git_sync.sh`**: Will loop through a list of local repos amd do a "pull" on all of them - use to update your laptop when you go on the road
 3. **`update_repo.sh`**: If you want to backup your own config - run this on your active workstation when you make changes to your environment. It automatically copies your active `~/.bashrc.d` and dotfiles into the local Git repository while **stripping out personal details and cloud secrets** (like Azure Client IDs and GCP credentials) from `bash_environment.sh` and `gitconfig`.
 4. **`rehydrate_repo.sh`**: Run this immediately after cloning the repository onto a brand-new WSL distro or cloud VM. It instantly deploys the repository files into your new home directory, securely adding the required `.` prefixes to hide the dotfiles and configuring directory permissions. 
-5. **`install_cloud_sdks.sh`**: Cross-platform bootstrap. Detects macOS (Homebrew) or Linux (`apt` / `dnf` / `yum`) and installs AWS CLI, Azure CLI, gcloud, OCI CLI, Terraform, and Asciinema (plus `wslu` on WSL).
+5. **`install_cloud_sdks_universal.sh`**: Universal bootstrap for macOS and Linux. Detects Homebrew vs `apt` / `dnf` / `yum` and installs AWS CLI, Azure CLI, gcloud, OCI CLI, Terraform, and Asciinema (plus `wslu` on WSL).
 
 ---
 ### Files
@@ -85,12 +85,9 @@ bash_env/
 │  ├─ git_setup.sh           # Initial Git bootstrap script
 │  ├─ git_clone.sh           # Script to pull down repositories
 │  ├─ git_sync.sh            # Custom Git workflow script (powers gpull, gpush, gstat)
-│  ├─ install_cloud_sdks.sh  # Bootstraps AWS, Azure, GCP, OCI, Terraform (Darwin + Linux)
+│  ├─ install_cloud_sdks_universal.sh  # Bootstraps AWS, Azure, GCP, OCI, Terraform (macOS + Linux)
 │  ├─ update_repo.sh         # Secures and syncs active dotfiles into the Git repository
 │  └─ rehydrate_repo.sh      # Deploys configurations from the repo to a new machine
-│
-├─ darwin/
-│  └─ install_cloud_sdk_brew.sh  # Thin wrapper → ../install_cloud_sdks.sh
 │
 ├─ server_bashrc_files/  # Standalone bashrc files for cloud/lab servers
 ├─ ssh/                  # SSH client config templates (with Linux & Windows proxy examples)

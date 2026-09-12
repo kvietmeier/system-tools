@@ -1,12 +1,12 @@
 #!/bin/bash
 ###=============================================================================###
-# install_cloud_sdks.sh
-#   Cross-platform bootstrap for cloud CLIs and lab tools:
+# install_cloud_sdks_universal.sh
+#   Universal bootstrap for cloud CLIs and lab tools (macOS + Linux):
 #     Azure CLI, AWS CLI, Google Cloud SDK, OCI CLI, Terraform, asciinema
 #     (+ wslu on WSL)
 #
 # Usage:
-#   ./install_cloud_sdks.sh [--quiet|--verbose]
+#   ./install_cloud_sdks_universal.sh [--quiet|--verbose]
 #
 # Detects:
 #   macOS (Darwin)  -> Homebrew (incl. HashiCorp tap, gcloud cask)

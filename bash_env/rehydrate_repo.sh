@@ -51,5 +51,5 @@ fi
 echo "✅ Environment rehydrated!"
 echo "Next steps:"
 echo "1. Edit ~/.bash_environment.sh to add this specific server's secrets."
-echo "2. Run ./install_cloud_sdks.sh to bootstrap AWS, GCP, Azure, and Terraform."
+echo "2. Run ./install_cloud_sdks_universal.sh to bootstrap AWS, GCP, Azure, and Terraform."
 echo "3. Run 'source ~/.bashrc' or restart your terminal."
