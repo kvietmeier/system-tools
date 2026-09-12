@@ -11,5 +11,8 @@ Many of my PowerShell scripts are in the AzureLabs repo under "scripts", this re
 Folders:
 
 * Profile - PowerShell profile customizations
-* SystemSetup - Customizations for winget and othre utilities
+* SystemSetup - Customizations for winget and other utilities
+* ServerSetups - Lab/server OS bootstrap helpers
 * users - Active Directory scripts
+
+Cloud provider PowerShell lives with the cloud repos (e.g. `cloud-tools/azure/scripts`, `cloud-tools/gcp/powershell`).

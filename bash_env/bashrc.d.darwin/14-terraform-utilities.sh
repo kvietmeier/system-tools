@@ -84,6 +84,19 @@ tfclstate() {
     terraform init
 }
 
+# Recursive tree clean: *.tfstate(+.backup) and .terraform dirs under ROOT_DIR (default: .)
+# Does not run terraform init — use tfclean for cwd + reinit.
+cleantform_state() {
+    local ROOT_DIR="${1:-.}"
+
+    echo "Cleaning Terraform state files and .terraform directories in: $ROOT_DIR"
+
+    find "$ROOT_DIR" -type f \( -name "*.tfstate" -o -name "*.tfstate.backup" \) -print -exec rm -f {} \;
+    find "$ROOT_DIR" -type d -name ".terraform" -print -exec rm -rf {} \;
+
+    echo "Cleanup complete."
+}
+
 ###=================================================================================================###
 ###  Aliases
 ###=================================================================================================###
