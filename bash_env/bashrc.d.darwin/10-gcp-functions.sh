@@ -26,18 +26,28 @@ gcp_authenticate() {
     unset GOOGLE_APPLICATION_CREDENTIALS GCP_DEFAULT_PROJECT
 
     # 3. Verify primary gcloud human user identity (Required for CLI SA impersonation)
+    # Impersonation (possibly left on from a prior session) can mask a dead user
+    # refresh token — clear it while we validate the human credential.
+    gcloud config unset auth/impersonate_service_account &>/dev/null
+
     local ACTIVE_ACCOUNT
     ACTIVE_ACCOUNT=$(gcloud auth list --filter="status:ACTIVE" --format="value(account)" 2>/dev/null | head -n 1)
 
-    if [[ -z "$ACTIVE_ACCOUNT" ]]; then
-        echo "[!] No active gcloud user account found. Launching user login..."
+    # "ACTIVE" in auth list does not mean the refresh token is still valid.
+    # print-access-token is the real reauth canary used by gcloud compute/*.
+    if [[ -z "$ACTIVE_ACCOUNT" ]] || ! gcloud auth print-access-token &>/dev/null; then
+        echo "[!] gcloud user credentials missing or expired. Launching user login..."
         if ! gcloud auth login; then
             echo "[-] Error: Interactive user login failed." >&2
             return 1
         fi
         ACTIVE_ACCOUNT=$(gcloud auth list --filter="status:ACTIVE" --format="value(account)" 2>/dev/null | head -n 1)
+        if [[ -z "$ACTIVE_ACCOUNT" ]] || ! gcloud auth print-access-token &>/dev/null; then
+            echo "[-] Error: User login completed but credentials are still unusable." >&2
+            return 1
+        fi
     else
-        echo "[+] Found active human identity: [${ACTIVE_ACCOUNT}]."
+        echo "[+] Found valid human identity: [${ACTIVE_ACCOUNT}]."
     fi
 
     # Explicitly bind the active user account to gcloud config
