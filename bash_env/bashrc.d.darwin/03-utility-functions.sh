@@ -208,7 +208,7 @@ test_workspace_edge() {
 
 #==============================================#
 # Function: check_cloud_auth
-# Purpose: Quick identity check across VAST VMS + Azure/GCP/AWS CLIs
+# Purpose: Quick identity check across Polaris/vastcloud + Azure/GCP/AWS CLIs
 #==============================================#
 check_cloud_auth() {
     local GREEN='\033[0;32m'
@@ -217,13 +217,21 @@ check_cloud_auth() {
     local RED='\033[0;31m'
     local NC='\033[0m'
 
-    echo -e "${BLUE}--- Cloud Identity & VAST Status ---${NC}"
+    echo -e "${BLUE}--- Cloud Identity & Polaris Status ---${NC}"
 
-    echo -ne "VAST VMS: "
-    if [ -n "$VMS_ADDRESS" ]; then
-        echo -e "${GREEN}${VMS_USER}@${VMS_ADDRESS}${NC}"
+    echo -ne "Polaris:  "
+    if command -v vastcloud &> /dev/null; then
+        local VC_CTX VC_AUTH VC_USER
+        VC_CTX=$(vastcloud config current-context 2>/dev/null)
+        VC_AUTH=$(vastcloud auth status 2>/dev/null | head -1)
+        if [[ "$VC_AUTH" == *"Authenticated as"* ]]; then
+            VC_USER=$(echo "$VC_AUTH" | sed -E 's/.*Authenticated as[[:space:]]+//')
+            echo -e "${GREEN}${VC_USER}${NC} (ctx: ${VC_CTX:-none})"
+        else
+            echo -e "${ORANGE}Not logged in (vastcloud login)${NC}"
+        fi
     else
-        echo -e "${RED}NOT SET${NC}"
+        echo -e "${RED}CLI not found${NC}"
     fi
 
     echo -ne "Azure:    "
