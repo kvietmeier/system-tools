@@ -60,11 +60,24 @@ gcp_authenticate() {
     gcloud config set auth/impersonate_service_account "${GCP_SA_EMAIL}" &>/dev/null
 
     # 6. Synchronize VAST Polaris context if vastcloud binary exists
+    # GCP uses one shared Polaris context (many projects underneath) — resolve via
+    # POLARIS_CONTEXTS shortcuts from ~/.bash_environment.sh (gcp, then gcpstage).
     if command -v vastcloud >/dev/null 2>&1; then
-        local target_ctx="staging-gcp-${GCP_PROJECT_ID}-ctx"
-        vastcloud config use-context "$target_ctx" &>/dev/null || true
-        export VASTC_CONTEXT="$target_ctx"
-        export POLARIS_CONTEXT="$target_ctx"
+        local target_ctx=""
+        if declare -p POLARIS_CONTEXTS &>/dev/null; then
+            target_ctx="${POLARIS_CONTEXTS[gcp]:-${POLARIS_CONTEXTS[gcpstage]:-}}"
+        fi
+        if [[ -n "$target_ctx" ]]; then
+            echo "[+] Syncing VAST Polaris context: $target_ctx"
+            if vastcloud config use-context "$target_ctx"; then
+                export VASTC_CONTEXT="$target_ctx"
+                export POLARIS_CONTEXT="$target_ctx"
+            else
+                echo "[-] Warning: Failed to set vastcloud context '$target_ctx'." >&2
+            fi
+        else
+            echo "[-] Warning: No POLARIS_CONTEXTS[gcp|gcpstage] mapping found; Polaris context not synced." >&2
+        fi
     fi
 
     echo "[+] System Identity Matrix: User [${ACTIVE_ACCOUNT}] active, ADC set, project pinned, and impersonation active."
