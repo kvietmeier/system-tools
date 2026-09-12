@@ -16,7 +16,13 @@ This repository contains a personal Bash environment setup for WSL, Linux, and m
   karlv@macbook [Local] :~$
   ```
 
-The bashrc files in **server_bashrc_files** are standalone files that you can drop onto a cloud or lab server that will set the prompt you see above and other useful aliases and settings like `set -o vi`.
+The file in **server_bashrc_files** is a standalone drop-in `~/.bashrc` for a new cloud/lab VM. It sets a cloud-tagged prompt (e.g. `user@host [GCP]:~`), vi editing, shared history, and common aliases — without the full laptop `bashrc.d` stack.
+
+```shell
+# On the VM:
+cp bashrc_lab_server.sh ~/.bashrc && source ~/.bashrc
+```
+
 
 ---
 ### Sharing with colleagues who use zsh (porting notes)
@@ -89,7 +95,8 @@ bash_env/
 │  ├─ update_repo.sh         # Secures and syncs active dotfiles into the Git repository
 │  └─ rehydrate_repo.sh      # Deploys configurations from the repo to a new machine
 │
-├─ server_bashrc_files/  # Standalone bashrc files for cloud/lab servers
+├─ server_bashrc_files/  # Drop-in ~/.bashrc for cloud/lab VMs
+│  └─ bashrc_lab_server.sh
 ├─ ssh/                  # SSH client config templates (with Linux & Windows proxy examples)
 │
 ├─ bashrc.d.linux/       # Modular scripts for WSL/Linux
