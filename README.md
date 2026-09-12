@@ -1,3 +1,22 @@
+# system-tools
+
+Quick-drop utilities and shell/PowerShell environment for laptops and lab hosts.
+Thin bootstrap helpers only — not a substitute for Ansible (fleet config) or `cloud-tools` (cloud procedures).
+
+## What's here
+
+| Path | Purpose |
+|------|---------|
+| `bash_env/` | Modular Bash env (`bashrc.d.darwin` / `bashrc.d.linux`), sync scripts, lab VM drop-in bashrcs |
+| `powershell/` | Profile, Windows/WSL workstation setup, AD helpers. Cloud PS lives in `cloud-tools` |
+| `*.sh` (repo root) | One-shot host helpers: users, hosts file, initial config, WSL XDG, etc. |
+
+Edit live config under `~/.bashrc.d`, then run `bash_env/update_repo.sh` to copy back into the repo (`--all` also syncs `common/`).
+
+More detail for the Bash stack: [`bash_env/README.md`](bash_env/README.md).
+
+---
+
 ## macOS (Darwin) Bash Environment Setup
 
 ```shell
@@ -118,3 +137,5 @@ Launch air-gapped or single-use ephemeral browser instances directly from your t
 * `tfapply` / `tfplan` / `tfdestroy`: Automatically injects all `*.tfvars` in the current directory using `-var-file` flags.
 * `tfclean`: Purges `.terraform` directories, state files, and re-initializes.
 * `tf_all`: Prints VMS management URLs, monitoring endpoints, and IP details.
+* `cloudauth` / `check_cloud_auth`: Quick Polaris + Azure/GCP/AWS identity check.
+* `cleantform_state [dir]`: Recursive tree clean of `*.tfstate` and `.terraform` dirs (no re-init).
