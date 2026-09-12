@@ -1,18 +1,20 @@
-### PowerShell Scripting Samples, Snippets, and my profile mods.
+# PowerShell (system-tools)
 
----
+Profile mods, Windows/WSL workstation setup, and lab host helpers.
+Cloud provider PowerShell lives under `cloud-tools` — not here.
 
-Various scripts and utilities I have written for projects and code snippets I have found useful.  
-  
-Many of my PowerShell scripts are in the AzureLabs repo under "scripts", this repo is primarily to share my profile mods.
+## Folders
 
----
+| Path | Purpose |
+|------|---------|
+| `Profile/` | PowerShell profile customizations |
+| `SystemSetup/` | winget and workstation utilities |
+| `ServerSetups/` | Lab/server OS bootstrap helpers |
+| `users/` | Active Directory scripts |
 
-Folders:
+Root `*.ps1` files are mostly local utilities or command cheatsheets (`.ps1` for IDE formatting — not all are meant to be run end-to-end).
 
-* Profile - PowerShell profile customizations
-* SystemSetup - Customizations for winget and other utilities
-* ServerSetups - Lab/server OS bootstrap helpers
-* users - Active Directory scripts
+## Cloud PowerShell
 
-Cloud provider PowerShell lives with the cloud repos (e.g. `cloud-tools/azure/scripts`, `cloud-tools/gcp/powershell`).
+* Azure: `cloud-tools/azure/scripts/`
+* GCP: `cloud-tools/gcp/powershell/`
