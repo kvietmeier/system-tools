@@ -60,7 +60,10 @@ Host ws2022
 Host ws2025
     HostName <windows-2025-ip>
 
-# Common settings for the ws* pattern (includes ControlMaster multiplexing)
+# Common settings for the ws* pattern (OpenSSH Server on Windows Server)
+# ControlMaster reuses connections; Ciphers pin algorithms Windows OpenSSH accepts reliably.
+# Client-side prerequisite (run once on your Mac/Linux workstation):
+#   mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets
 Host ws*
     User Administrator
     IdentityFile ~/.ssh/id_ed25519
@@ -106,6 +109,3 @@ Host *
     PKCS11Provider none
     ServerAliveInterval 120
     LogLevel ERROR
-
-# Create the ControlMaster socket directory once:
-#   mkdir -p ~/.ssh/sockets && chmod 700 ~/.ssh/sockets
