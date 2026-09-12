@@ -13,7 +13,7 @@ A modular Bash environment customized for **macOS Apple Silicon (Darwin)** with 
 To install, place the main entry points in your `$HOME` directory and modularize configurations inside `~/.bashrc.d/`:
 
 ```text
-~/.bash_environment               # Private/Sensitive local variables (git-ignored)
+~/.bash_environment.sh            # Private/Sensitive local variables (git-ignored; .sh for editor formatting)
 ~/.bashrc                         # Main shell initialization file
 ~/.bashrc.d/
 ├── 01-set-env_variables.sh       # Paths, Homebrew, and Environment Tagging
@@ -36,7 +36,7 @@ To install, place the main entry points in your `$HOME` directory and modularize
 
 ### 1. Environment File Setup
 
-Create `~/.bash_environment` to store your non-committed secrets and default values:
+Create `~/.bash_environment.sh` to store your non-committed secrets and default values:
 
 ```bash
 export GCP_PROJECT_ID="your-gcp-project-id"
@@ -110,7 +110,7 @@ Launch air-gapped or single-use ephemeral browser instances directly from your t
 
 #### Microsoft Azure
 
-* `azlogin`: Logs in using Service Principal details defined in `~/.bash_environment`.
+* `azlogin`: Logs in using Service Principal details defined in `~/.bash_environment.sh`.
 * `azvms`, `azvnets`, `azsubnets`, `azdisks`: Helper functions for quick tabular resource discovery.
 
 ### 6. Terraform Helpers

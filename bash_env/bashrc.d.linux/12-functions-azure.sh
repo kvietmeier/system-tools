@@ -7,7 +7,7 @@
 ### License: Apache 2.0
 ###############################################################################
 
-### Assumes environment variables are set in .bash_environment or manually:
+### Assumes environment variables are set in ~/.bash_environment.sh or manually:
 # export AZURE_CLIENT_ID="your-client-id"
 # export AZURE_CLIENT_SECRET="your-client-secret"
 # export AZURE_TENANT_ID="your-tenant-id"

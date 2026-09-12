@@ -21,7 +21,7 @@ mkdir -p "$REPO_DIR"
 # ---------------------------------------------------------
 # STANDARD EXPORT: Copy basic config files
 # ---------------------------------------------------------
-# List of standard dotfiles to copy directly (removed bash_environment and gitconfig)
+# List of standard dotfiles to copy directly (removed bash_environment.sh and gitconfig)
 FILES=(
     "bash_aliases"
     "bashrc"
@@ -39,7 +39,7 @@ for file in "${FILES[@]}"; do
 done
 
 # ---------------------------------------------------------
-# SECURE EXPORT: Stub out .bash_environment secrets
+# SECURE EXPORT: Stub out .bash_environment.sh secrets
 # ---------------------------------------------------------
 # Define your list of sensitive variables here for easy updating.
 SENSITIVE_VARS_LIST=(
@@ -47,18 +47,23 @@ SENSITIVE_VARS_LIST=(
     "VMS_PASSWORD"
     "GOOGLE_APPLICATION_CREDENTIALS"
     "GCP_DEFAULT_PROJECT"
+    "GCP_SA_EMAIL"
+    "GCP_PROJECT_ID"
     "AZURE_[A-Z_]+"
     "AWS_[A-Z_]+"
+    "POLARIS_[A-Z_]+"
+    "VASTDATA_[A-Z_]+"
+    "TF_VAR_[A-Z_]+"
 )
 
 # Join the array into a single regex pattern separated by pipes (|)
 SENSITIVE_PATTERN=$(IFS='|'; echo "${SENSITIVE_VARS_LIST[*]}")
 
-if [ -f "$HOME/.bash_environment" ]; then
-    echo "  🔒 Sanitizing and copying ~/.bash_environment -> $REPO_DIR/bash_environment"
+if [ -f "$HOME/.bash_environment.sh" ]; then
+    echo "  🔒 Sanitizing and copying ~/.bash_environment.sh -> $REPO_DIR/bash_environment.sh"
     
     # Use sed to find sensitive 'export VAR=value' lines and strip everything after the '='.
-    sed -E "s/^(export ($SENSITIVE_PATTERN))=.*/\1=/" "$HOME/.bash_environment" > "$REPO_DIR/bash_environment"
+    sed -E "s/^(export ($SENSITIVE_PATTERN))=.*/\1=/" "$HOME/.bash_environment.sh" > "$REPO_DIR/bash_environment.sh"
 fi
 
 # ---------------------------------------------------------

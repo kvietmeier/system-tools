@@ -8,7 +8,6 @@
 ###===============================================================================================###
 
 ###--- Base Terraform directory
-# Dynamically pull from 01-set-env_variables.sh, fallback if not set
 export VOC_BASE="${VOCDIR:-${HOME}/repos/vast_on_cloud}"
 
 ###--- Terraform Apply/Destroy/Plan with all .tfvars in current dir
@@ -93,21 +92,21 @@ tfclstate() {
 if command -v terraform >/dev/null 2>&1; then
 
     ###--- Output helper aliases
-    alias vms='tf_vms'
-    alias vmsmon='tf_vmsmon'
-    alias vmsip='tf_vmsip'
-    alias eboxips='tf_private_ips'
+    #alias vms='tf_vms'
+    #alias vmsmon='tf_vmsmon'
+    #alias vmsip='tf_vmsip'
+    #alias eboxips='tf_private_ips'
 
     # VAST Terraform / VoC shortcuts (Wired dynamically to 01-set-env_variables.sh)
-    alias vasttf="cd ${VASTTF}"
-    alias vocdir="cd ${VOCDIR}/5_3"
-    alias vastdir="cd ${VASTTF}"
-    alias cluster01="cd ${TFGCP}/cluster01"
-    alias cluster02="cd ${TFGCP}/cluster02"
-    alias cluster03="cd ${TFGCP}/cluster03"
+    #alias vasttf="cd ${VASTTF}"
+    #alias vocdir="cd ${VOCDIR}/5_3"
+    #alias vastdir="cd ${VASTTF}"
+    #alias cluster01="cd ${TFGCP}/cluster01"
+    #alias cluster02="cd ${TFGCP}/cluster02"
+    #alias cluster03="cd ${TFGCP}/cluster03"
 
     # Optional VoC scripts
-    alias install_vast01="${HOME}/bin/vast.voc.install.py"
+    #alias install_vast01="${HOME}/bin/vast.voc.install.py"
     alias pgpsecrets="${HOME}/Terraform/scripts/vast.extracts3secret.sh"
-    alias vmsstat="${HOME}/bin/vms.status.py"
+    #alias vmsstat="${HOME}/bin/vms.status.py"
 fi

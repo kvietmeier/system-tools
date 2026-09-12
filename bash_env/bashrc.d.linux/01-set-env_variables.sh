@@ -100,4 +100,4 @@ fi
 ###===============================================================================================###
 ### Include Personal Environment Variables
 ###===============================================================================================###
-[ -f "${HOME}/.bash_environment" ] && . "${HOME}/.bash_environment"
+[ -f "${HOME}/.bash_environment.sh" ] && . "${HOME}/.bash_environment.sh"

@@ -12,7 +12,7 @@ echo "Rehydrating environment from $REPO_DIR to $HOME..."
 # Files to copy to the home directory (adding the dot prefix)
 FILES=(
     "bash_aliases"
-    "bash_environment"
+    "bash_environment.sh"
     "bashrc"
     "dircolors"
     "gitconfig"
@@ -50,6 +50,6 @@ fi
 
 echo "✅ Environment rehydrated!"
 echo "Next steps:"
-echo "1. Edit ~/.bash_environment to add this specific server's secrets."
+echo "1. Edit ~/.bash_environment.sh to add this specific server's secrets."
 echo "2. Run ./install_cloud_sdks.sh to bootstrap AWS, GCP, Azure, and Terraform."
 echo "3. Run 'source ~/.bashrc' or restart your terminal."

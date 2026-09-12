@@ -9,7 +9,7 @@
 
 
 ###--- Authenticate to GCP using service account credentials
-###--- Assumes environment variables are set in .bash_environment or manually:
+###--- Assumes environment variables are set in ~/.bash_environment.sh or manually:
 
 gcp_auth() {
     # Validate environment variables and credentials file
