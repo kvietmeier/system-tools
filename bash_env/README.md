@@ -29,6 +29,13 @@ cp bashrc_lab_server.sh ~/.bashrc && source ~/.bashrc
 2. `bashrc_lab_server.sh` — lean interactive shell only
 3. Optional: `install_cloud_sdks_universal.sh` when a demo needs AWS/GCP/Azure/TF
 4. Do **not** run full `rehydrate_repo.sh` / `bashrc.d.*` into Lima unless you intentionally want the laptop suite
+5. iTerm2 Dynamic Profiles: `iterm2/lima-vms.json` → `~/Library/Application Support/iTerm2/DynamicProfiles/`
+
+```shell
+cp bash_env/iterm2/lima-vms.json \
+  ~/Library/Application\ Support/iTerm2/DynamicProfiles/lima-vms.json
+# Profiles → Lima aws-env / Lima gcp-env (auto-starts VM, then limactl shell)
+```
 
 ```shell
 ./install_lab_base_universal.sh --verbose \
