@@ -23,6 +23,19 @@ The file in **server_bashrc_files** is a standalone drop-in `~/.bashrc` for a ne
 cp bashrc_lab_server.sh ~/.bashrc && source ~/.bashrc
 ```
 
+**Lima / lab-demo boxes** (minimal comfort, not the Mac day-to-day stack):
+
+1. `install_lab_base_universal.sh` — vim, git, python3/pip, asciinema, tree, jq, tmux, etc.
+2. `bashrc_lab_server.sh` — lean interactive shell only
+3. Optional: `install_cloud_sdks_universal.sh` when a demo needs AWS/GCP/Azure/TF
+4. Do **not** run full `rehydrate_repo.sh` / `bashrc.d.*` into Lima unless you intentionally want the laptop suite
+
+```shell
+./install_lab_base_universal.sh --verbose \
+  --dotfiles ./common \
+  --configure-git   # or: GIT_USER_NAME=... GIT_USER_EMAIL=... ./install_lab_base_universal.sh --configure-git
+```
+
 
 ---
 ### Sharing with colleagues who use zsh (porting notes)
@@ -92,6 +105,7 @@ bash_env/
 │  ├─ git_clone.sh           # Script to pull down repositories
 │  ├─ git_sync.sh            # Custom Git workflow script (powers gpull, gpush, gstat)
 │  ├─ install_cloud_sdks_universal.sh  # Bootstraps AWS, Azure, GCP, OCI, Terraform (macOS + Linux)
+│  ├─ install_lab_base_universal.sh    # Lean lab/Lima base: vim git python pip asciinema tree jq …
 │  ├─ update_repo.sh         # Sync ~/.bashrc.d → bashrc.d.{darwin|linux}; --all for common/
 │  └─ rehydrate_repo.sh      # Deploys configurations from the repo to a new machine
 │
