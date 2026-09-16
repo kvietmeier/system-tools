@@ -110,7 +110,7 @@ Launch air-gapped or single-use ephemeral browser instances directly from your t
 ### 4. VAST Cloud & Polaris Context Management
 
 * `vcstat` / `vcstatus`: Displays current AWS profile, active Polaris context, and auth status.
-* `vclogin [staging|prod|dev|admin]`: Non-interactive Polaris login via `--username` / `--password-stdin` using credentials from `~/.bash_environment.sh`. Use `vclogin --browser` for OIDC.
+* `vclogin`: Non-interactive Polaris login for the current context (staging vs prod credentials from `~/.bash_environment.sh`).
 * `vccreategcp [name] [nodes]`: Deploys a GCP VAST cluster.
 * `vccreateaws [name] [nodes]`: Deploys an AWS VAST cluster.
 
