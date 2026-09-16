@@ -44,15 +44,120 @@ vc_context() {
     fi
 }
 
-# Pure pass-through login wrapper: uses active context from ~/.vast/config.yaml
+# Resolve Polaris email/password from ~/.bash_environment.sh exports.
+# Preference: explicit POLARIS_USER + POLARIS_PASS/PASSWORD, then profile arg,
+# then infer from context name, else staging defaults.
+_vc_resolve_creds() {
+    local profile="${1:-}"
+    local ctx="${2:-}"
+    local user="" pass=""
+
+    if [[ -n "${POLARIS_USER:-}" && -n "${POLARIS_PASS:-${POLARIS_PASSWORD:-}}" ]]; then
+        _VC_USER="$POLARIS_USER"
+        _VC_PASS="${POLARIS_PASS:-$POLARIS_PASSWORD}"
+        _VC_PROFILE="override"
+        return 0
+    fi
+
+    case "$(printf '%s' "$profile" | tr '[:upper:]' '[:lower:]')" in
+        staging|stage)
+            user="${POLARIS_USER_STAGING:-}"
+            pass="${POLARIS_PASSWORD:-${POLARIS_PASS_STAGING:-}}"
+            ;;
+        prod|production)
+            user="${POLARIS_USER_PROD:-}"
+            pass="${POLARIS_PASS_PROD:-}"
+            ;;
+        dev|development)
+            user="${POLARIS_USER_DEV:-}"
+            pass="${POLARIS_PASS_DEV:-}"
+            ;;
+        admin)
+            user="${POLARIS_ADMIN:-}"
+            pass="${POLARIS_PASSWORD:-}"
+            ;;
+        "")
+            case "$ctx" in
+                *prod*|*Prod*|*PROD*)
+                    profile="prod"
+                    user="${POLARIS_USER_PROD:-}"
+                    pass="${POLARIS_PASS_PROD:-}"
+                    ;;
+                *dev*|*Dev*|*DEV*)
+                    profile="dev"
+                    user="${POLARIS_USER_DEV:-}"
+                    pass="${POLARIS_PASS_DEV:-}"
+                    ;;
+                *)
+                    # Lab contexts are typically staging-*
+                    profile="staging"
+                    user="${POLARIS_USER_STAGING:-${POLARIS_ADMIN:-}}"
+                    pass="${POLARIS_PASSWORD:-${POLARIS_PASS_STAGING:-}}"
+                    ;;
+            esac
+            ;;
+        *)
+            echo "> [ERROR] Unknown credential profile '$profile' (use staging|prod|dev|admin)" >&2
+            return 1
+            ;;
+    esac
+
+    if [[ -z "$user" || -z "$pass" ]]; then
+        echo "> [ERROR] Missing Polaris credentials for profile '${profile:-auto}'." >&2
+        echo "> Set POLARIS_USER_STAGING/POLARIS_PASSWORD (or PROD/DEV pairs) in ~/.bash_environment.sh" >&2
+        return 1
+    fi
+
+    _VC_USER="$user"
+    _VC_PASS="$pass"
+    _VC_PROFILE="${profile:-auto}"
+}
+
+# Non-interactive password login using env credentials (default).
+# Usage:
+#   vclogin                  # current context + inferred/staging creds
+#   vclogin staging|prod|dev|admin
+#   vclogin --browser [...]  # fall back to browser OIDC
+# Extra flags after the profile are passed to vastcloud login.
 vc_login() {
-    local current_ctx
+    local current_ctx profile=""
+    local -a extra_args=()
     current_ctx=$(vastcloud config current-context 2>/dev/null || echo "Unknown")
+
+    if [[ "${1:-}" == "--browser" || "${1:-}" == "browser" ]]; then
+        shift
+        echo "======================================================================================"
+        echo " Initiating Polaris browser OIDC for context: $current_ctx"
+        echo "======================================================================================"
+        vastcloud login "$@"
+        return
+    fi
+
+    case "${1:-}" in
+        staging|stage|prod|production|dev|development|admin)
+            profile="$1"
+            shift
+            ;;
+    esac
+    extra_args=("$@")
+
+    if ! _vc_resolve_creds "$profile" "$current_ctx"; then
+        return 1
+    fi
+
     echo "======================================================================================"
-    echo " Initiating Polaris OIDC Authentication for active context: $current_ctx"
+    echo " Polaris non-interactive login"
+    echo "   Context : $current_ctx"
+    echo "   Profile : $_VC_PROFILE"
+    echo "   User    : $_VC_USER"
     echo "======================================================================================"
 
-    vastcloud login "$@"
+    # Prefer --password-stdin so the secret never appears on the argv list.
+    printf '%s' "$_VC_PASS" | vastcloud login \
+        --non-interactive \
+        --username "$_VC_USER" \
+        --password-stdin \
+        "${extra_args[@]}"
 }
 
 # Consolidated Status Utility
