@@ -126,18 +126,47 @@ install_gcp_cluster() {
         --skip-checker
 }
 
-install_aws_cluster() { 
+# Non-interactive AWS create from a Polaris pending deployment (--select).
+# Env defaults (override as needed):
+#   AWS_SUBNET_ID, AWS_SECURITY_GROUP_IDS (comma-separated), AWS_REGION, AWS_ZONE
+# Optional: AWS_NAME, AWS_NODES (only if you need to override Polaris nodeCount)
+install_aws_cluster() {
     local cluster_name="${1:-${AWS_NAME:-kv-aws-cluster}}"
-    local node_count="${2:-${AWS_NODES:-1}}"
+    local node_count="${2:-${AWS_NODES:-}}"
+    local region="${AWS_REGION:-us-east-1}"
+    local zone="${AWS_ZONE:-us-east-1a}"
+    local subnet="${AWS_SUBNET_ID:-}"
+    local sg_ids="${AWS_SECURITY_GROUP_IDS:-${AWS_SECURITY_GROUP_ID:-}}"
 
-    echo "Deploying AWS Cluster: $cluster_name with $node_count nodes..."
-    vastcloud cluster create \
-        --non-interactive \
-        --select "$cluster_name" \
-        --nodes "$node_count" \
-        --subnet "${AWS_SUBNET_ID:-}" \
-        --aws-security-group-id "${AWS_SECURITY_GROUP_ID:-}" \
-        --skip-checker 
+    if [[ -z "$subnet" ]]; then
+        echo "[-] Error: AWS_SUBNET_ID is required for non-interactive create." >&2
+        return 1
+    fi
+    if [[ -z "$sg_ids" ]]; then
+        echo "[-] Error: AWS_SECURITY_GROUP_IDS is required for non-interactive create." >&2
+        return 1
+    fi
+
+    local -a args=(
+        --non-interactive
+        --force
+        --select "$cluster_name"
+        --provider aws
+        --region "$region"
+        --zone "$zone"
+        --subnet "$subnet"
+        --aws-security-group-ids "$sg_ids"
+        --skip-preflight
+        --skip-checker
+    )
+    # Node count comes from the Polaris deployment unless explicitly overridden.
+    if [[ -n "$node_count" ]]; then
+        args+=(--nodes "$node_count")
+    fi
+
+    echo "Deploying AWS cluster (non-interactive): $cluster_name"
+    echo "  region=$region zone=$zone subnet=$subnet sg=$sg_ids${node_count:+ nodes=$node_count}"
+    vastcloud cluster create "${args[@]}"
 }
 
 if command -v vastcloud >/dev/null 2>&1; then
@@ -153,5 +182,7 @@ if command -v vastcloud >/dev/null 2>&1; then
     alias vccreategcp='install_gcp_cluster'
     alias vccreateaws='install_aws_cluster'
     alias vcdestroy='vastcloud cluster delete --select'
-    alias clusterhelp='echo "Usage: vccreategcp [cluster_name] [node_count]  OR  vccreateaws [cluster_name] [node_count]"'
+    alias clusterhelp='echo "Usage: vccreategcp [name] [nodes]
+  vccreateaws [name] [nodes]
+  AWS env: AWS_SUBNET_ID AWS_SECURITY_GROUP_IDS [AWS_REGION AWS_ZONE AWS_NAME AWS_NODES]"'
 fi
