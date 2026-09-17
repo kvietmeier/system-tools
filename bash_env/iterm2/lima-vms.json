@@ -3,38 +3,34 @@
     {
       "Name": "Lima aws-env",
       "Guid": "lima-aws-env",
-      "Badge Text": "aws-env",
       "Tags": ["Lima", "lab"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
-      "Command": "/bin/bash -lc 'limactl start -y aws-env >/dev/null; exec limactl shell aws-env'"
+      "Command": "/bin/bash -lc 'limactl start -y --log-level=error aws-env >/dev/null 2>&1; exec limactl shell aws-env'"
     },
     {
       "Name": "Lima gcp-env",
       "Guid": "lima-gcp-env",
-      "Badge Text": "gcp-env",
       "Tags": ["Lima", "lab"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
-      "Command": "/bin/bash -lc 'limactl start -y gcp-env >/dev/null; exec limactl shell gcp-env'"
+      "Command": "/bin/bash -lc 'limactl start -y --log-level=error gcp-env >/dev/null 2>&1; exec limactl shell gcp-env'"
     },
     {
       "Name": "Lima MacOS01",
       "Guid": "lima-MacOS01",
-      "Badge Text": "MacOS01",
       "Tags": ["Lima"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
-      "Command": "/bin/bash -lc 'limactl start -y MacOS01 >/dev/null; exec limactl shell MacOS01'"
+      "Command": "/bin/bash -lc 'limactl start -y --log-level=error MacOS01 >/dev/null 2>&1; exec limactl shell MacOS01'"
     },
     {
       "Name": "Lima MacOS_Clean",
       "Guid": "lima-MacOS_Clean",
-      "Badge Text": "MacOS_Clean",
       "Tags": ["Lima"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
-      "Command": "/bin/bash -lc 'limactl start -y MacOS_Clean >/dev/null; exec limactl shell MacOS_Clean'"
+      "Command": "/bin/bash -lc 'limactl start -y --log-level=error MacOS_Clean >/dev/null 2>&1; exec limactl shell MacOS_Clean'"
     }
   ]
 }
