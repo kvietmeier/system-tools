@@ -67,8 +67,21 @@ bind 'set bell-style none' 2>/dev/null || true
 ###-----------------------------------------------------------------------------###
 ### Cloud / environment tag
 ###-----------------------------------------------------------------------------###
-# Prefer DMI product_name (matches laptop Darwin detection), fall back to vendor.
+# Prefer explicit ENV_TAG, then Lima instance name, then DMI / vendor.
 detect_cloud() {
+    if [[ -n "${ENV_TAG:-}" ]]; then
+        echo "${ENV_TAG}"
+        return
+    fi
+
+    # Lima default hostname is lima-<instance> (e.g. lima-aws-env → aws-env)
+    local host
+    host=$(hostname -s 2>/dev/null || hostname)
+    if [[ "$host" == lima-* ]]; then
+        echo "${host#lima-}"
+        return
+    fi
+
     if [[ -n "${WSL_DISTRO_NAME:-}" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
         echo "WSL"
         return
@@ -98,6 +111,7 @@ detect_cloud() {
 
 CLOUD_PROVIDER=$(detect_cloud)
 export CLOUD_PROVIDER
+export ENV_TAG="${ENV_TAG:-$CLOUD_PROVIDER}"
 
 ###-----------------------------------------------------------------------------###
 ### Colors + aliases

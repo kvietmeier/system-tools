@@ -21,7 +21,23 @@ Host ghost
     PasswordAuthentication no
 
 ###=====================================================================================###
-#        Git Forge Alias (GitLab / GitHub Enterprise style)
+#        Git forges (GitHub personal + VAST GitLab)
+#        Prefer ssh-agent (Lima: ssh.forwardAgent: true). IdentityFile is fallback.
+###=====================================================================================###
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
+Host git.vastdata.com
+    HostName git.vastdata.com
+    User git
+    IdentityFile ~/.ssh/ed25519_gitlab
+    IdentitiesOnly yes
+
+###=====================================================================================###
+#        Git Forge Alias (legacy placeholder — prefer Host git.vastdata.com above)
 ###=====================================================================================###
 Host git.example.com
     HostName git.example.com

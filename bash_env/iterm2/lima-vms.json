@@ -3,7 +3,7 @@
     {
       "Name": "Lima aws-env",
       "Guid": "lima-aws-env",
-      "Tags": ["Lima", "lab"],
+      "Tags": ["Lima", "lab", "durable"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
       "Command": "/bin/bash -lc 'limactl start -y --log-level=error aws-env >/dev/null 2>&1; exec limactl shell aws-env'"
@@ -11,23 +11,31 @@
     {
       "Name": "Lima gcp-env",
       "Guid": "lima-gcp-env",
-      "Tags": ["Lima", "lab"],
+      "Tags": ["Lima", "lab", "durable"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
       "Command": "/bin/bash -lc 'limactl start -y --log-level=error gcp-env >/dev/null 2>&1; exec limactl shell gcp-env'"
     },
     {
-      "Name": "Lima MacOS01",
+      "Name": "Lima vcdev-env",
+      "Guid": "lima-vcdev-env",
+      "Tags": ["Lima", "lab", "durable", "vastcloud-dev"],
+      "Dynamic Profile Parent Name": "Default",
+      "Custom Command": "Yes",
+      "Command": "/bin/bash -lc 'limactl start -y --log-level=error vcdev-env >/dev/null 2>&1; exec limactl shell vcdev-env'"
+    },
+    {
+      "Name": "Lima MacOS bare-node (ephemeral)",
       "Guid": "lima-MacOS01",
-      "Tags": ["Lima"],
+      "Tags": ["Lima", "macos-bare-node", "ephemeral"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
       "Command": "/bin/bash -lc 'limactl start -y --log-level=error MacOS01 >/dev/null 2>&1; exec limactl shell MacOS01'"
     },
     {
-      "Name": "Lima MacOS_Clean",
+      "Name": "Lima MacOS_Clean bare-node (ephemeral)",
       "Guid": "lima-MacOS_Clean",
-      "Tags": ["Lima"],
+      "Tags": ["Lima", "macos-bare-node", "ephemeral"],
       "Dynamic Profile Parent Name": "Default",
       "Custom Command": "Yes",
       "Command": "/bin/bash -lc 'limactl start -y --log-level=error MacOS_Clean >/dev/null 2>&1; exec limactl shell MacOS_Clean'"

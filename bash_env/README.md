@@ -23,7 +23,21 @@ The file in **server_bashrc_files** is a standalone drop-in `~/.bashrc` for a ne
 cp bashrc_lab_server.sh ~/.bashrc && source ~/.bashrc
 ```
 
-**Lima / lab-demo boxes** (minimal comfort, not the Mac day-to-day stack):
+**Lima boxes — two different roles:**
+
+| Kind | Examples | Lifecycle |
+|------|----------|-----------|
+| Durable Linux labs | `aws-env`, `gcp-env`, `vcdev-env` | Keep; bootstrap once; reuse for cloud / vcdev work |
+| Ephemeral macOS bare-node | `MacOS01`, `MacOS_Clean` | **Use once, then wipe** — bare macOS node tests only |
+
+Do **not** put vastcloud/git lab setup on the MacOS* VMs; wipe when done:
+
+```shell
+./bash_env/lima/wipe_macos_ephemeral.sh          # MacOS01 + MacOS_Clean
+./bash_env/lima/wipe_macos_ephemeral.sh --all-macos
+```
+
+**Durable Linux lab-demo boxes** (minimal comfort, not the Mac day-to-day stack):
 
 1. `install_lab_base_universal.sh` — vim, git, python3/pip, asciinema, tree, jq, tmux, etc.
 2. `bashrc_lab_server.sh` — lean interactive shell only
@@ -34,7 +48,8 @@ cp bashrc_lab_server.sh ~/.bashrc && source ~/.bashrc
 ```shell
 cp bash_env/iterm2/lima-vms.json \
   ~/Library/Application\ Support/iTerm2/DynamicProfiles/lima-vms.json
-# Profiles → Lima aws-env / Lima gcp-env (auto-starts VM, then limactl shell)
+# Durable: Lima aws-env / gcp-env / vcdev-env
+# Ephemeral: Lima MacOS* bare-node (wipe after use)
 ```
 
 ```shell
@@ -42,6 +57,38 @@ cp bash_env/iterm2/lima-vms.json \
   --dotfiles ./common \
   --configure-git   # or: GIT_USER_NAME=... GIT_USER_EMAIL=... ./install_lab_base_universal.sh --configure-git
 ```
+
+#### Lima `vcdev-env` — isolated vastcloud DEV + git forges
+
+Use a dedicated Lima VM so host `vastcloud` 2.7.1 and Mac `~/bin/vcdev` never share a `~/.vast` / pipe.
+Guest installs a **Linux** DEV binary from Artifactory (`vastcloud-linux-arm64` / `amd64`) as `~/bin/vcdev` — do not copy the host Mach-O binary.
+
+```shell
+# On Mac (ssh-agent must already have github + git.vastdata.com keys):
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+ssh-add --apple-use-keychain ~/.ssh/ed25519_gitlab
+
+cd ~/github/system-tools
+./bash_env/lima/bootstrap_vcdev_lab.sh
+# options: --recreate  --skip-clone  --no-alias  --name other-env
+
+limactl shell vcdev-env
+# inside: vcdev --version   # also aliased as vastcloud by default
+#         ls ~/repos ~/repos-vast
+#         git -C ~/repos-vast/vastoncloud pull
+```
+
+Pieces:
+
+| Path | Role |
+|------|------|
+| `lima/lab-ubuntu-vcdev.yaml` | Lima template (agent forward, host mounts read-only) |
+| `lima/bootstrap_vcdev_lab.sh` | Host orchestrator: create/start → lab base → vcdev → clone |
+| `install_vastcloud_universal.sh` | `--release` / `--dev` (Artifactory fallback) / `--both` |
+| `common/repo_lists/lima-vcdev.txt` | system-tools + automation-tools + vastoncloud |
+| `ssh/config` | `Host github.com` + `Host git.vastdata.com` templates |
+
+Git: agent-forwarded SSH + `ssh-keyscan` into guest `known_hosts`. Personal → `~/repos`, VAST GitLab → `~/repos-vast`.
 
 
 ---
