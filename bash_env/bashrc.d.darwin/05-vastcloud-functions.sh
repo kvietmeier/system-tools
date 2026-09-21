@@ -98,75 +98,88 @@ vast_status() {
     echo -e "\n======================================================"
 }
 
+# Non-interactive GCP create from a Polaris pending deployment (--select).
+# Sticky env (set once per session/lab): GCP_PROJECT_ID GCP_SA_EMAIL GCP_SUBNET
+#   GCP_VIP_RANGE GCP_REGION GCP_ZONE
+# Per-run: name argument (or GCP_NAME). Node count from Polaris metadata.
+#   vccreategcp <polaris-select-name>
 install_gcp_cluster() {
-    # Dynamically fetch project ID if GCP_PROJECT is unset
-    local default_project
-    default_project=$(gcloud config get-value project 2>/dev/null)
-    
-    local project_id="${GCP_PROJECT:-$default_project}"
-    local cluster_name="${1:-${GCP_NAME:-kv-gcp-cluster}}"
-    local node_count="${2:-${GCP_NODES:-1}}"
+    local cluster_name="${1:-${GCP_NAME:-}}"
+    local project_id="${GCP_PROJECT_ID:-}"
+    local sa_email="${GCP_SA_EMAIL:-}"
+    local subnet="${GCP_SUBNET:-}"
+    local vips="${GCP_VIP_RANGE:-}"
+    local region="${GCP_REGION:-}"
+    local zone="${GCP_ZONE:-}"
 
-    if [[ -z "$project_id" ]]; then
-        echo "[-] Error: No GCP Project set in environment or gcloud config." >&2
+    local missing=()
+    [[ -z "$cluster_name" ]] && missing+=("name-arg-or-GCP_NAME")
+    [[ -z "$project_id" ]] && missing+=("GCP_PROJECT_ID")
+    [[ -z "$sa_email" ]] && missing+=("GCP_SA_EMAIL")
+    [[ -z "$subnet" ]] && missing+=("GCP_SUBNET")
+    [[ -z "$vips" ]] && missing+=("GCP_VIP_RANGE")
+    [[ -z "$region" ]] && missing+=("GCP_REGION")
+    [[ -z "$zone" ]] && missing+=("GCP_ZONE")
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "[-] Error: missing: ${missing[*]}" >&2
+        echo "    Usage: vccreategcp <polaris-select-name>" >&2
         return 1
     fi
 
-    echo "Deploying GCP Cluster: $cluster_name with $node_count nodes..."
+    echo "Deploying GCP cluster (non-interactive): $cluster_name"
+    echo "  project=$project_id region=$region zone=$zone subnet=$subnet"
     vastcloud cluster create \
         --non-interactive \
+        --force \
         --select "$cluster_name" \
+        --provider gcp \
         --gcp-project-id "$project_id" \
-        --gcp-service-account-email "${GCP_SA_EMAIL:-}" \
-        --nodes "$node_count" \
-        --protocol-vips "${GCP_VIP_RANGE:-}" \
-        --subnet "${GCP_SUBNET:-}" \
-        --region "${GCP_REGION:-us-central1}" \
-        --zone "${GCP_ZONE:-us-central1-a}" \
+        --gcp-service-account-email "$sa_email" \
+        --subnet "$subnet" \
+        --protocol-vips "$vips" \
+        --region "$region" \
+        --zone "$zone" \
         --skip-checker
 }
 
 # Non-interactive AWS create from a Polaris pending deployment (--select).
-# Env defaults (override as needed):
-#   AWS_SUBNET_ID, AWS_SECURITY_GROUP_IDS (comma-separated), AWS_REGION, AWS_ZONE
-# Optional: AWS_NAME, AWS_NODES (only if you need to override Polaris nodeCount)
+# Sticky env (set once per session/lab): AWS_SUBNET_ID AWS_SECURITY_GROUP_ID
+#   (comma-separated for multiple SGs) AWS_REGION AWS_ZONE
+# Per-run: name argument (or AWS_NAME). Node count from Polaris metadata.
+#   vccreateaws <polaris-select-name>
 install_aws_cluster() {
-    local cluster_name="${1:-${AWS_NAME:-kv-aws-cluster}}"
-    local node_count="${2:-${AWS_NODES:-}}"
-    local region="${AWS_REGION:-us-east-1}"
-    local zone="${AWS_ZONE:-us-east-1a}"
+    local cluster_name="${1:-${AWS_NAME:-}}"
+    local region="${AWS_REGION:-}"
+    local zone="${AWS_ZONE:-}"
     local subnet="${AWS_SUBNET_ID:-}"
-    local sg_ids="${AWS_SECURITY_GROUP_IDS:-${AWS_SECURITY_GROUP_ID:-}}"
+    # Singular or plural; either may be a comma-separated list of sg-... IDs
+    local sg_ids="${AWS_SECURITY_GROUP_ID:-${AWS_SECURITY_GROUP_IDS:-}}"
 
-    if [[ -z "$subnet" ]]; then
-        echo "[-] Error: AWS_SUBNET_ID is required for non-interactive create." >&2
+    local missing=()
+    [[ -z "$cluster_name" ]] && missing+=("name-arg-or-AWS_NAME")
+    [[ -z "$subnet" ]] && missing+=("AWS_SUBNET_ID")
+    [[ -z "$sg_ids" ]] && missing+=("AWS_SECURITY_GROUP_ID")
+    [[ -z "$region" ]] && missing+=("AWS_REGION")
+    [[ -z "$zone" ]] && missing+=("AWS_ZONE")
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "[-] Error: missing: ${missing[*]}" >&2
+        echo "    Usage: vccreateaws <polaris-select-name>" >&2
         return 1
-    fi
-    if [[ -z "$sg_ids" ]]; then
-        echo "[-] Error: AWS_SECURITY_GROUP_IDS is required for non-interactive create." >&2
-        return 1
-    fi
-
-    local -a args=(
-        --non-interactive
-        --force
-        --select "$cluster_name"
-        --provider aws
-        --region "$region"
-        --zone "$zone"
-        --subnet "$subnet"
-        --aws-security-group-ids "$sg_ids"
-        --skip-preflight
-        --skip-checker
-    )
-    # Node count comes from the Polaris deployment unless explicitly overridden.
-    if [[ -n "$node_count" ]]; then
-        args+=(--nodes "$node_count")
     fi
 
     echo "Deploying AWS cluster (non-interactive): $cluster_name"
-    echo "  region=$region zone=$zone subnet=$subnet sg=$sg_ids${node_count:+ nodes=$node_count}"
-    vastcloud cluster create "${args[@]}"
+    echo "  region=$region zone=$zone subnet=$subnet sg=$sg_ids"
+    vastcloud cluster create \
+        --non-interactive \
+        --force \
+        --select "$cluster_name" \
+        --provider aws \
+        --region "$region" \
+        --zone "$zone" \
+        --subnet "$subnet" \
+        --aws-security-group-ids "$sg_ids" \
+        --skip-preflight \
+        --skip-checker
 }
 
 if command -v vastcloud >/dev/null 2>&1; then
@@ -182,7 +195,11 @@ if command -v vastcloud >/dev/null 2>&1; then
     alias vccreategcp='install_gcp_cluster'
     alias vccreateaws='install_aws_cluster'
     alias vcdestroy='vastcloud cluster delete --select'
-    alias clusterhelp='echo "Usage: vccreategcp [name] [nodes]
-  vccreateaws [name] [nodes]
-  AWS env: AWS_SUBNET_ID AWS_SECURITY_GROUP_IDS [AWS_REGION AWS_ZONE AWS_NAME AWS_NODES]"'
+    alias clusterhelp='echo "Sticky env once per lab; name changes per run:
+  vccreategcp <polaris-select-name>
+  vccreateaws <polaris-select-name>
+  GCP sticky: GCP_PROJECT_ID GCP_SA_EMAIL GCP_SUBNET GCP_VIP_RANGE GCP_REGION GCP_ZONE
+  AWS sticky: AWS_SUBNET_ID AWS_SECURITY_GROUP_ID AWS_REGION AWS_ZONE
+  AWS_SECURITY_GROUP_ID may be comma-separated (sg-aaa,sg-bbb)
+  Node count from Polaris deployment metadata."'
 fi
