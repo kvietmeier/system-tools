@@ -64,6 +64,9 @@ export AZURE_CLIENT_ID="your-azure-app-id"
 export AZURE_CLIENT_SECRET="your-azure-client-secret"
 export AZURE_TENANT_ID="your-tenant-id"
 export AZURE_SUBSCRIPTION_ID="your-sub-id"
+export AZURE_SUBSCRIPTION_NAME="your-sub-display-name"   # optional
+# After editing: source ~/.bash_environment.sh && azlogin
+# If subscription fails: azsubs lists IDs this SP can see — copy the right one into AZURE_SUBSCRIPTION_ID
 ```
 
 ### 2. Source Configuration

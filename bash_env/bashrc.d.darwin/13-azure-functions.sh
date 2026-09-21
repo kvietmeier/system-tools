@@ -114,18 +114,43 @@ azcontext() {
 
 
 ###############################################################################
+### Helper: Subscriptions visible to the current Azure identity
+### Use after a failed azlogin to pick the right AZURE_SUBSCRIPTION_ID.
+###############################################################################
+azsubs() {
+    if ! command -v az &>/dev/null; then
+        echo "az CLI not found" >&2
+        return 1
+    fi
+    echo "Subscriptions visible to current Azure identity:"
+    echo "  (fix AZURE_SUBSCRIPTION_ID / AZURE_SUBSCRIPTION_NAME / AZURE_TENANT_ID"
+    echo "   in ~/.bash_environment.sh, then: source ~/.bash_environment.sh && azlogin)"
+    echo ""
+    az account list \
+        --query '[].{Name:name, SubscriptionId:id, TenantId:tenantId, State:state}' \
+        -o table
+}
+
+###############################################################################
 ### Function: Login to Azure with a Service Principal
+### Reads AZURE_* from ~/.bash_environment.sh (you own the real IDs).
 ###############################################################################
 azlogin() {
     if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_CLIENT_SECRET" ] || \
        [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
-        echo "Missing required variables for Azure CLI Service Principal login."
-        echo "Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are set."
+        echo "Missing required Azure lab variables." >&2
+        echo "Set these in ~/.bash_environment.sh, then: source ~/.bash_environment.sh" >&2
+        echo "  AZURE_CLIENT_ID" >&2
+        echo "  AZURE_CLIENT_SECRET" >&2
+        echo "  AZURE_TENANT_ID" >&2
+        echo "  AZURE_SUBSCRIPTION_ID" >&2
+        echo "  AZURE_SUBSCRIPTION_NAME   # optional, display only" >&2
         return 1
     fi
 
     echo ""
-    echo "Authenticating to Azure Subscription: $AZURE_SUBSCRIPTION_ID"
+    echo "Authenticating SP to tenant ${AZURE_TENANT_ID}"
+    echo "Expected subscription: ${AZURE_SUBSCRIPTION_NAME:-unknown} ($AZURE_SUBSCRIPTION_ID)"
     echo ""
 
     if ! az login \
@@ -133,14 +158,17 @@ azlogin() {
         --username "$AZURE_CLIENT_ID" \
         --password "$AZURE_CLIENT_SECRET" \
         --tenant "$AZURE_TENANT_ID" >/dev/null; then
-        echo "[-] Azure login failed." >&2
+        echo "[-] Azure login failed (check AZURE_CLIENT_ID / SECRET / TENANT_ID in ~/.bash_environment.sh)." >&2
         unset AZURE_LAB_AUTH
         return 1
     fi
 
     # Set the subscription context
-    if ! az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null; then
-        echo "[-] Failed to set subscription $AZURE_SUBSCRIPTION_ID" >&2
+    if ! az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null 2>&1; then
+        echo "[-] Subscription not available to this SP: $AZURE_SUBSCRIPTION_ID" >&2
+        echo "    Fix AZURE_SUBSCRIPTION_ID (and name/tenant if needed) in ~/.bash_environment.sh" >&2
+        echo "" >&2
+        azsubs >&2
         unset AZURE_LAB_AUTH
         return 1
     fi
