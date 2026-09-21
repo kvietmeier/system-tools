@@ -8,7 +8,10 @@
 ###############################################################################
 
 ###############################################################################
-### Helper: Azure auth status (alias: azauth)
+### Helper: Azure auth status (alias: azauth / azureauth / azstatus)
+### Requires intentional azlogin this shell (AZURE_LAB_AUTH=1) — leftover
+### ~/.azure SP tokens alone do NOT count as logged in (same as gcp/aws habit).
+### Also requires CLI subscription == AZURE_SUBSCRIPTION_ID when that is set.
 ###############################################################################
 az_auth_status() {
     local line_mode=0
@@ -25,34 +28,81 @@ az_auth_status() {
         return 1
     fi
 
-    local user sub_id
+    local user user_type sub_id sub_name expected
+    expected="${AZURE_SUBSCRIPTION_ID:-}"
     user=$(az account show --query 'user.name' -o tsv 2>/dev/null)
+    user_type=$(az account show --query 'user.type' -o tsv 2>/dev/null)
     sub_id=$(az account show --query 'id' -o tsv 2>/dev/null)
+    sub_name=$(az account show --query 'name' -o tsv 2>/dev/null)
+
+    local state="none"
+    # none | stale | mismatch | ok
+    # AZURE_LAB_AUTH is set only by azlogin in this shell; cleared by azlogout.
+    if [[ "${AZURE_LAB_AUTH:-0}" != "1" ]]; then
+        if [[ -n "$user" ]]; then
+            state="stale"
+        else
+            state="none"
+        fi
+    elif [[ -z "$user" || -z "$sub_id" ]]; then
+        state="none"
+    elif [[ -n "$expected" && "$sub_id" != "$expected" ]]; then
+        state="mismatch"
+    else
+        state="ok"
+    fi
 
     if [[ $line_mode -eq 1 ]]; then
         echo -ne "Azure:    "
-        if [[ -n "$user" ]]; then
-            echo -e "${GREEN}${user}${NC}"
-        else
-            echo -e "${ORANGE}Not logged in (azlogin)${NC}"
-        fi
-        return 0
+        case "$state" in
+            ok)
+                echo -e "${GREEN}${user}${NC} (${sub_name:-$sub_id})"
+                ;;
+            stale)
+                echo -e "${ORANGE}Stale token — run azlogin (or azlogout)${NC}"
+                ;;
+            mismatch)
+                echo -e "${ORANGE}Wrong subscription — run azlogin${NC}"
+                ;;
+            *)
+                echo -e "${ORANGE}Not logged in (azlogin)${NC}"
+                ;;
+        esac
+        [[ "$state" == "ok" ]] && return 0 || return 1
     fi
 
     echo "========================================================"
     echo "              AZURE AUTHENTICATION STATUS               "
     echo "========================================================"
-    if [[ -n "$user" ]]; then
-        echo -e "User:         ${GREEN}${user}${NC}"
-        echo "Subscription: ${AZURE_SUBSCRIPTION_NAME:-$sub_id}"
-        echo "Tenant:       ${AZURE_TENANT_DOMAIN:-unknown}"
-        if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" && "$sub_id" != "$AZURE_SUBSCRIPTION_ID" ]]; then
-            echo -e "${ORANGE}Warning: CLI sub ($sub_id) != AZURE_SUBSCRIPTION_ID${NC}"
-        fi
-    else
-        echo -e "${ORANGE}Not logged in — run azlogin${NC}"
-    fi
+    case "$state" in
+        ok)
+            echo -e "Status:       ${GREEN}authenticated (azlogin this shell)${NC}"
+            echo "Identity:     $user (${user_type:-unknown})"
+            echo "Subscription: ${sub_name:-unknown} ($sub_id)"
+            echo "Tenant:       ${AZURE_TENANT_DOMAIN:-unknown}"
+            ;;
+        stale)
+            echo -e "Status:       ${ORANGE}stale ~/.azure token — not an intentional lab session${NC}"
+            echo "Identity:     $user (${user_type:-unknown})"
+            echo "CLI sub:      ${sub_name:-unknown} ($sub_id)"
+            echo "Fix:          azlogout && azlogin"
+            ;;
+        mismatch)
+            echo -e "Status:       ${ORANGE}misaligned — wrong subscription${NC}"
+            echo "Identity:     $user (${user_type:-unknown})"
+            echo "CLI sub:      ${sub_name:-unknown} ($sub_id)"
+            echo "Expected:     ${AZURE_SUBSCRIPTION_NAME:-unknown} ($expected)"
+            echo "Fix:          azlogin"
+            ;;
+        *)
+            echo -e "Status:       ${ORANGE}not logged in — run azlogin${NC}"
+            if [[ -n "$expected" ]]; then
+                echo "Expected sub: ${AZURE_SUBSCRIPTION_NAME:-unknown} ($expected)"
+            fi
+            ;;
+    esac
     echo "========================================================"
+    [[ "$state" == "ok" ]] && return 0 || return 1
 }
 
 ###############################################################################
@@ -78,16 +128,28 @@ azlogin() {
     echo "Authenticating to Azure Subscription: $AZURE_SUBSCRIPTION_ID"
     echo ""
 
-    az login \
+    if ! az login \
         --service-principal \
         --username "$AZURE_CLIENT_ID" \
         --password "$AZURE_CLIENT_SECRET" \
-        --tenant "$AZURE_TENANT_ID" >/dev/null
+        --tenant "$AZURE_TENANT_ID" >/dev/null; then
+        echo "[-] Azure login failed." >&2
+        unset AZURE_LAB_AUTH
+        return 1
+    fi
 
     # Set the subscription context
-    az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null
+    if ! az account set --subscription "$AZURE_SUBSCRIPTION_ID" >/dev/null; then
+        echo "[-] Failed to set subscription $AZURE_SUBSCRIPTION_ID" >&2
+        unset AZURE_LAB_AUTH
+        return 1
+    fi
 
-    echo "Azure CLI logged in to subscription: $AZURE_SUBSCRIPTION_ID"
+    # Session marker: this shell intentionally authenticated (like gcplogin/awslogin)
+    export AZURE_LAB_AUTH=1
+
+    echo "Azure CLI logged in to: ${AZURE_SUBSCRIPTION_NAME:-$AZURE_SUBSCRIPTION_ID}"
+    echo "Run azlogout when finished (same habit as gcplogout / awslogout)."
 }
 
 
@@ -95,12 +157,13 @@ azlogin() {
 ### Function: Logout from Azure
 ###############################################################################
 azlogout() {
+    unset AZURE_LAB_AUTH
     if [ -n "$AZURE_CLIENT_ID" ]; then
-        az logout --username "$AZURE_CLIENT_ID" >/dev/null
+        az logout --username "$AZURE_CLIENT_ID" >/dev/null 2>&1 || true
         echo "Azure CLI logged out: $AZURE_CLIENT_ID"
     else
-        echo "Variable AZURE_CLIENT_ID not set. Logging out all sessions."
-        az logout >/dev/null
+        az logout >/dev/null 2>&1 || true
+        echo "Azure CLI logged out (all sessions)."
     fi
 }
 
@@ -212,6 +275,8 @@ list_azdisks() {
 # --- Azure aliases if az exists
 if command -v az >/dev/null 2>&1; then
     alias azauth=az_auth_status
+    alias azureauth=az_auth_status
+    alias azstatus=az_auth_status
     alias azdisks=list_azdisks
     alias azvms=list_azvms
     alias azsubnets=list_azsubnets
