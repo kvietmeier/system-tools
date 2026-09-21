@@ -114,20 +114,66 @@ gcp_deauth() {
 # Telemetry, Tokens, & State Auditing
 # ====================================================================================
 
-# Print a structured high-density matrix of current authentication profiles
-gcp_status() {
+# Lean auth check (alias: gcpauth). Use --line for cloudauth one-liner mode.
+# Validates user refresh token — "ACTIVE" in auth list is not enough.
+gcp_auth_status() {
+    local line_mode=0
+    [[ "${1:-}" == "--line" ]] && line_mode=1
+
+    local GREEN='\033[0;32m' ORANGE='\033[0;33m' RED='\033[0;31m' NC='\033[0m'
+
+    if ! command -v gcloud &>/dev/null; then
+        if [[ $line_mode -eq 1 ]]; then
+            echo -e "GCP:      ${RED}CLI not found${NC}"
+        else
+            echo "GCP: gcloud CLI not found"
+        fi
+        return 1
+    fi
+
+    local account project token_ok=0
+    account=$(gcloud config get-value account 2>/dev/null)
+    project=$(gcloud config get-value project 2>/dev/null)
+    # Clear impersonation briefly so we test the human credential
+    local saved_impersonate
+    saved_impersonate=$(gcloud config get-value auth/impersonate_service_account 2>/dev/null)
+    gcloud config unset auth/impersonate_service_account &>/dev/null
+    if gcloud auth print-access-token &>/dev/null; then
+        token_ok=1
+    fi
+    if [[ -n "$saved_impersonate" && "$saved_impersonate" != "(unset)" ]]; then
+        gcloud config set auth/impersonate_service_account "$saved_impersonate" &>/dev/null
+    fi
+
+    if [[ $line_mode -eq 1 ]]; then
+        echo -ne "GCP:      "
+        if [[ $token_ok -eq 1 && -n "$account" ]]; then
+            echo -e "${GREEN}${account}${NC} (Proj: ${project:-none})"
+        else
+            echo -e "${ORANGE}Not logged in / token expired (gcplogin)${NC}"
+        fi
+        return 0
+    fi
+
     echo "========================================================"
     echo "               GCP AUTHENTICATION STATUS                "
     echo "========================================================"
-    
-    local ACTIVE_ACCOUNT
-    ACTIVE_ACCOUNT=$(gcloud auth list --filter="status:ACTIVE" --format="value(account)" 2>/dev/null)
-    echo "Active Account : ${ACTIVE_ACCOUNT:-No active account found}"
-
-    local ACTIVE_PROJECT
-    ACTIVE_PROJECT=$(gcloud config get-value project 2>/dev/null)
-    echo "Target Project : ${ACTIVE_PROJECT:-No project scope set}"
+    echo "Account : ${account:-none}"
+    echo "Project : ${project:-none}"
+    if [[ $token_ok -eq 1 ]]; then
+        echo -e "User token: ${GREEN}valid${NC}"
+    else
+        echo -e "User token: ${ORANGE}missing/expired — run gcplogin${NC}"
+    fi
+    local impersonate
+    impersonate=$(gcloud config get-value auth/impersonate_service_account 2>/dev/null)
+    echo "Impersonate SA: ${impersonate:-(none)}"
     echo "========================================================"
+}
+
+# Print a structured high-density matrix of current authentication profiles
+gcp_status() {
+    gcp_auth_status
 }
 
 # Get the targeted core active project string
@@ -200,6 +246,7 @@ if command -v gcloud &>/dev/null; then
     # Identity, Authentication, & Access Management (IAM)
     alias gcplogin='gcp_authenticate'
     alias gcplogout='gcp_deauth'
+    alias gcpauth='gcp_auth_status'
     alias gcpuser='gcp_get_core_acct'
     alias gcptoken='gcp_get_access_token'
     alias gcproles='gcp_check_roles'

@@ -8,32 +8,58 @@
 ###############################################################################
 
 ###############################################################################
+### Helper: Azure auth status (alias: azauth)
+###############################################################################
+az_auth_status() {
+    local line_mode=0
+    [[ "${1:-}" == "--line" ]] && line_mode=1
+
+    local GREEN='\033[0;32m' ORANGE='\033[0;33m' RED='\033[0;31m' NC='\033[0m'
+
+    if ! command -v az &>/dev/null; then
+        if [[ $line_mode -eq 1 ]]; then
+            echo -e "Azure:    ${RED}CLI not found${NC}"
+        else
+            echo "Azure: az CLI not found"
+        fi
+        return 1
+    fi
+
+    local user sub_id
+    user=$(az account show --query 'user.name' -o tsv 2>/dev/null)
+    sub_id=$(az account show --query 'id' -o tsv 2>/dev/null)
+
+    if [[ $line_mode -eq 1 ]]; then
+        echo -ne "Azure:    "
+        if [[ -n "$user" ]]; then
+            echo -e "${GREEN}${user}${NC}"
+        else
+            echo -e "${ORANGE}Not logged in (azlogin)${NC}"
+        fi
+        return 0
+    fi
+
+    echo "========================================================"
+    echo "              AZURE AUTHENTICATION STATUS               "
+    echo "========================================================"
+    if [[ -n "$user" ]]; then
+        echo -e "User:         ${GREEN}${user}${NC}"
+        echo "Subscription: ${AZURE_SUBSCRIPTION_NAME:-$sub_id}"
+        echo "Tenant:       ${AZURE_TENANT_DOMAIN:-unknown}"
+        if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" && "$sub_id" != "$AZURE_SUBSCRIPTION_ID" ]]; then
+            echo -e "${ORANGE}Warning: CLI sub ($sub_id) != AZURE_SUBSCRIPTION_ID${NC}"
+        fi
+    else
+        echo -e "${ORANGE}Not logged in — run azlogin${NC}"
+    fi
+    echo "========================================================"
+}
+
+###############################################################################
 ### Helper function: Check current Azure CLI context
 ###############################################################################
 azcontext() {
-    if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
-        echo "Variable \$AZURE_SUBSCRIPTION_ID not set. Please define subscription details first."
-        return 1
-    fi
-
-    # Get current Azure CLI subscription ID
-    local current_sub_id
-    current_sub_id=$(az account show --query "id" -o tsv 2>/dev/null)
-
-    if [ -z "$current_sub_id" ] || [ "$current_sub_id" != "$AZURE_SUBSCRIPTION_ID" ]; then
-        echo ""
-        echo "======================================================="
-        echo "  No Azure Connection — use 'azlogin' to connect       "
-        echo "======================================================="
-        echo ""
-        return 1
-    else
-        echo ""
-        echo "======================================================================="
-        echo "  ${AZURE_SUBSCRIPTION_NAME:-<unknown>} in ${AZURE_TENANT_DOMAIN:-<unknown>} is logged in"
-        echo "======================================================================="
-        echo ""
-    fi
+    az_auth_status
 }
 
 
@@ -185,6 +211,7 @@ list_azdisks() {
 
 # --- Azure aliases if az exists
 if command -v az >/dev/null 2>&1; then
+    alias azauth=az_auth_status
     alias azdisks=list_azdisks
     alias azvms=list_azvms
     alias azsubnets=list_azsubnets

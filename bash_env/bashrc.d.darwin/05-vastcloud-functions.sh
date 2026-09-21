@@ -78,6 +78,53 @@ vc_login() {
         "$@"
 }
 
+# Lean Polaris auth check (alias: vcauth). Use --line for cloudauth one-liner mode.
+vc_auth_status() {
+    local line_mode=0
+    [[ "${1:-}" == "--line" ]] && line_mode=1
+
+    local GREEN='\033[0;32m' ORANGE='\033[0;33m' RED='\033[0;31m' NC='\033[0m'
+
+    if ! command -v vastcloud &>/dev/null; then
+        if [[ $line_mode -eq 1 ]]; then
+            echo -e "Polaris:  ${RED}CLI not found${NC}"
+        else
+            echo "Polaris: vastcloud CLI not found"
+        fi
+        return 1
+    fi
+
+    local ctx auth_line user
+    ctx=$(vastcloud config current-context 2>/dev/null || echo "none")
+    auth_line=$(vastcloud auth status 2>/dev/null | head -1)
+    user=""
+    if [[ "$auth_line" == *"Authenticated as"* ]]; then
+        user=$(echo "$auth_line" | sed -E 's/.*Authenticated as[[:space:]]+//')
+    fi
+
+    if [[ $line_mode -eq 1 ]]; then
+        echo -ne "Polaris:  "
+        if [[ -n "$user" ]]; then
+            echo -e "${GREEN}${user}${NC} (ctx: ${ctx})"
+        else
+            echo -e "${ORANGE}Not logged in (vclogin)${NC}"
+        fi
+        return 0
+    fi
+
+    echo "========================================================"
+    echo "             POLARIS / VASTCLOUD AUTH STATUS            "
+    echo "========================================================"
+    echo "Context: $ctx"
+    if [[ -n "$user" ]]; then
+        echo -e "Auth:    ${GREEN}${user}${NC}"
+    else
+        echo -e "Auth:    ${ORANGE}not authenticated — run vclogin${NC}"
+    fi
+    vastcloud auth status 2>/dev/null || true
+    echo "========================================================"
+}
+
 # Consolidated Status Utility
 vast_status() {
     echo "======================================================"
@@ -266,7 +313,7 @@ if command -v vastcloud >/dev/null 2>&1; then
     alias vcuse='vc_context'
     alias vcstat='vast_status'
     alias vcstatus='vast_status'
-    alias vcauth='vastcloud auth status'
+    alias vcauth='vc_auth_status'
     alias vclogin='vc_login'
     alias vccreategcp='install_gcp_cluster'
     alias vccreateaws='install_aws_cluster'

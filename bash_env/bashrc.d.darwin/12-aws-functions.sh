@@ -60,13 +60,52 @@ awslogin() {
 ### 2. Utility & Diagnostic Functions
 ###-------------------------------------------------------------------------------------------------###
 
+# Lean auth check (alias: awsauth). Use --line for cloudauth one-liner mode.
+aws_auth_status() {
+    local line_mode=0
+    [[ "${1:-}" == "--line" ]] && line_mode=1
+
+    local GREEN='\033[0;32m' ORANGE='\033[0;33m' RED='\033[0;31m' NC='\033[0m'
+
+    if ! command -v aws &>/dev/null; then
+        if [[ $line_mode -eq 1 ]]; then
+            echo -e "AWS:      ${RED}CLI not found${NC}"
+        else
+            echo "AWS: aws CLI not found"
+        fi
+        return 1
+    fi
+
+    local arn
+    arn=$(aws sts get-caller-identity --query 'Arn' --output tsv --cli-connect-timeout 2 2>/dev/null)
+    local ok=$?
+
+    if [[ $line_mode -eq 1 ]]; then
+        echo -ne "AWS:      "
+        if [[ $ok -eq 0 && -n "$arn" ]]; then
+            echo -e "${GREEN}${arn}${NC} (profile: ${AWS_PROFILE:-default})"
+        else
+            echo -e "${ORANGE}No valid session (awslogin)${NC}"
+        fi
+        return 0
+    fi
+
+    echo "========================================================"
+    echo "               AWS AUTHENTICATION STATUS                "
+    echo "========================================================"
+    echo "Profile : ${AWS_PROFILE:-none}"
+    echo "VAST ctx: ${VASTC_CONTEXT:-${POLARIS_CONTEXT:-none}}"
+    if [[ $ok -eq 0 && -n "$arn" ]]; then
+        echo -e "Identity: ${GREEN}${arn}${NC}"
+        aws sts get-caller-identity --query '{Account:Account, Arn:Arn}' --output table 2>/dev/null
+    else
+        echo -e "Identity: ${ORANGE}locked / token missing — run awslogin${NC}"
+    fi
+    echo "========================================================"
+}
+
 aws_whoami() {
-    echo "🔹 Active AWS Profile: ${AWS_PROFILE:-none}"
-    echo "🔹 Active VAST Context: ${VASTC_CONTEXT:-${POLARIS_CONTEXT:-none}}"
-    echo "> Executing: aws sts get-caller-identity --query '{Account:Account, Arn:Arn}' --output table"
-    aws sts get-caller-identity \
-        --query '{Account:Account, Arn:Arn}' \
-        --output table 2>/dev/null || echo "❌ Identity State: Locked / Token Missing"
+    aws_auth_status
 }
 
 aws_sso_status() {
@@ -140,6 +179,7 @@ if command -v aws >/dev/null 2>&1; then
     alias awslogout=aws_sso_logout
     alias awspurge=aws_purge_creds
     alias awswho=aws_whoami
+    alias awsauth=aws_auth_status
     alias awstatus=aws_sso_status
 
     # Fast-path wrappers for the three active AWS_SHORTCUTS (poc/qa/rnd)

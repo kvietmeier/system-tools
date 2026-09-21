@@ -207,71 +207,37 @@ test_workspace_edge() {
 
 
 #==============================================#
-# Function: check_cloud_auth
-# Purpose: Quick identity check across Polaris/vastcloud + Azure/GCP/AWS CLIs
+# Function: check_cloud_auth (alias: cloudauth)
+# Purpose: One-shot identity check across Polaris + Azure/GCP/AWS
 #==============================================#
 check_cloud_auth() {
-    local GREEN='\033[0;32m'
     local BLUE='\033[0;34m'
-    local ORANGE='\033[0;33m'
-    local RED='\033[0;31m'
     local NC='\033[0m'
 
     echo -e "${BLUE}--- Cloud Identity & Polaris Status ---${NC}"
 
-    echo -ne "Polaris:  "
-    if command -v vastcloud &> /dev/null; then
-        local VC_CTX VC_AUTH VC_USER
-        VC_CTX=$(vastcloud config current-context 2>/dev/null)
-        VC_AUTH=$(vastcloud auth status 2>/dev/null | head -1)
-        if [[ "$VC_AUTH" == *"Authenticated as"* ]]; then
-            VC_USER=$(echo "$VC_AUTH" | sed -E 's/.*Authenticated as[[:space:]]+//')
-            echo -e "${GREEN}${VC_USER}${NC} (ctx: ${VC_CTX:-none})"
-        else
-            echo -e "${ORANGE}Not logged in (vastcloud login)${NC}"
-        fi
+    if declare -F vc_auth_status &>/dev/null; then
+        vc_auth_status --line
     else
-        echo -e "${RED}CLI not found${NC}"
+        echo "Polaris:  (vc helpers not loaded)"
     fi
 
-    echo -ne "Azure:    "
-    if command -v az &> /dev/null; then
-        local AZ_USER
-        AZ_USER=$(az account show --query 'user.name' -o tsv 2>/dev/null)
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}${AZ_USER}${NC}"
-        else
-            echo -e "${ORANGE}Not logged in (az login)${NC}"
-        fi
+    if declare -F az_auth_status &>/dev/null; then
+        az_auth_status --line
     else
-        echo -e "${RED}CLI not found${NC}"
+        echo "Azure:    (az helpers not loaded)"
     fi
 
-    echo -ne "GCP:      "
-    if command -v gcloud &> /dev/null; then
-        local GCP_USER GCP_PROJ
-        GCP_USER=$(gcloud config get-value account 2>/dev/null)
-        GCP_PROJ=$(gcloud config get-value project 2>/dev/null)
-        if [ -n "$GCP_USER" ]; then
-            echo -e "${GREEN}${GCP_USER}${NC} (Proj: ${GCP_PROJ})"
-        else
-            echo -e "${ORANGE}Not logged in (gcloud auth login)${NC}"
-        fi
+    if declare -F gcp_auth_status &>/dev/null; then
+        gcp_auth_status --line
     else
-        echo -e "${RED}CLI not found${NC}"
+        echo "GCP:      (gcp helpers not loaded)"
     fi
 
-    echo -ne "AWS:      "
-    if command -v aws &> /dev/null; then
-        local AWS_USER
-        AWS_USER=$(aws sts get-caller-identity --query 'Arn' --output tsv --cli-connect-timeout 2 2>/dev/null)
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}${AWS_USER}${NC}"
-        else
-            echo -e "${ORANGE}No valid session (aws sso login)${NC}"
-        fi
+    if declare -F aws_auth_status &>/dev/null; then
+        aws_auth_status --line
     else
-        echo -e "${RED}CLI not found${NC}"
+        echo "AWS:      (aws helpers not loaded)"
     fi
 
     echo -e "${BLUE}------------------------------------${NC}"
