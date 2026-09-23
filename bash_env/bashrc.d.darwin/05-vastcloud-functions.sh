@@ -94,18 +94,26 @@ vc_auth_status() {
         return 1
     fi
 
-    local ctx auth_line user
+    local ctx auth_out user token_expired=0
     ctx=$(vastcloud config current-context 2>/dev/null || echo "none")
-    auth_line=$(vastcloud auth status 2>/dev/null | head -1)
+    auth_out=$(vastcloud auth status 2>/dev/null)
     user=""
-    if [[ "$auth_line" == *"Authenticated as"* ]]; then
-        user=$(echo "$auth_line" | sed -E 's/.*Authenticated as[[:space:]]+//')
+    if [[ "$auth_out" == *"Authenticated as"* ]]; then
+        user=$(printf '%s\n' "$auth_out" | sed -nE 's/.*Authenticated as[[:space:]]+//p' | head -1)
+    fi
+    # vastcloud reports e.g. "Token: expired (will refresh on next API call)"
+    if [[ "$auth_out" == *"Token: expired"* ]]; then
+        token_expired=1
     fi
 
     if [[ $line_mode -eq 1 ]]; then
         echo -ne "Polaris:  "
         if [[ -n "$user" ]]; then
-            echo -e "${GREEN}${user}${NC} (ctx: ${ctx})"
+            if [[ $token_expired -eq 1 ]]; then
+                echo -e "${GREEN}${user}${NC} (ctx: ${ctx}) ${ORANGE}— token expired${NC}"
+            else
+                echo -e "${GREEN}${user}${NC} (ctx: ${ctx})"
+            fi
         else
             echo -e "${ORANGE}Not logged in (vclogin)${NC}"
         fi
@@ -121,7 +129,11 @@ vc_auth_status() {
     else
         echo -e "Auth:    ${ORANGE}not authenticated — run vclogin${NC}"
     fi
-    vastcloud auth status 2>/dev/null || true
+    if [[ -n "$auth_out" ]]; then
+        printf '%s\n' "$auth_out"
+    else
+        vastcloud auth status 2>/dev/null || true
+    fi
     echo "========================================================"
 }
 
