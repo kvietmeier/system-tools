@@ -131,24 +131,27 @@ gcp_auth_status() {
         return 1
     fi
 
-    local account project token_ok=0
+    local account project token_ok=0 sa=""
     account=$(gcloud config get-value account 2>/dev/null)
     project=$(gcloud config get-value project 2>/dev/null)
     # Clear impersonation briefly so we test the human credential
     local saved_impersonate
     saved_impersonate=$(gcloud config get-value auth/impersonate_service_account 2>/dev/null)
+    if [[ -n "$saved_impersonate" && "$saved_impersonate" != "(unset)" ]]; then
+        sa="$saved_impersonate"
+    fi
     gcloud config unset auth/impersonate_service_account &>/dev/null
     if gcloud auth print-access-token &>/dev/null; then
         token_ok=1
     fi
-    if [[ -n "$saved_impersonate" && "$saved_impersonate" != "(unset)" ]]; then
-        gcloud config set auth/impersonate_service_account "$saved_impersonate" &>/dev/null
+    if [[ -n "$sa" ]]; then
+        gcloud config set auth/impersonate_service_account "$sa" &>/dev/null
     fi
 
     if [[ $line_mode -eq 1 ]]; then
         echo -ne "GCP:      "
         if [[ $token_ok -eq 1 && -n "$account" ]]; then
-            echo -e "${GREEN}${account}${NC} (Proj: ${project:-none})"
+            echo -e "${GREEN}${account}${NC} (Proj: ${project:-none}, SA: ${sa:-none})"
         else
             echo -e "${ORANGE}Not logged in / token expired (gcplogin)${NC}"
         fi
@@ -160,14 +163,12 @@ gcp_auth_status() {
     echo "========================================================"
     echo "Account : ${account:-none}"
     echo "Project : ${project:-none}"
+    echo "SA      : ${sa:-(none)}"
     if [[ $token_ok -eq 1 ]]; then
         echo -e "User token: ${GREEN}valid${NC}"
     else
         echo -e "User token: ${ORANGE}missing/expired — run gcplogin${NC}"
     fi
-    local impersonate
-    impersonate=$(gcloud config get-value auth/impersonate_service_account 2>/dev/null)
-    echo "Impersonate SA: ${impersonate:-(none)}"
     echo "========================================================"
 }
 
