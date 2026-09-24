@@ -77,7 +77,8 @@ aws_auth_status() {
     fi
 
     local arn
-    arn=$(aws sts get-caller-identity --query 'Arn' --output tsv --cli-connect-timeout 2 2>/dev/null)
+    # awscli output formats: json|text|table|yaml|yaml-stream (no tsv)
+    arn=$(aws sts get-caller-identity --query 'Arn' --output text --cli-connect-timeout 5 2>/dev/null)
     local ok=$?
 
     if [[ $line_mode -eq 1 ]]; then
