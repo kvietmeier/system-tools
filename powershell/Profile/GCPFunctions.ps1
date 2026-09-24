@@ -3,7 +3,7 @@
 ###===================================================================================###
 function GCPAuthADCCreds {
     param (
-        [string]$GCPProject = "clouddev-itdesk124"
+        [string]$GCPProject = "vast-on-cloud"
     )
 
     if (-not $env:GOOGLE_APPLICATION_CREDENTIALS) {

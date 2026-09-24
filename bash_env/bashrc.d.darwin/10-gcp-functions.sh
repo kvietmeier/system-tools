@@ -9,6 +9,38 @@
 ###############################################################################
 
 # ====================================================================================
+# Stale key-file guard
+# GOOGLE_APPLICATION_CREDENTIALS wins over ADC/impersonation for Go SDKs (vastcloud,
+# terraform). A retired project key (e.g. clouddev-itdesk124) causes opaque 403s.
+# Darwin auth is ADC + GCP_SA_EMAIL impersonation — key files must not stick around.
+# ====================================================================================
+_gcp_clear_stale_keyfile_creds() {
+    local gac="${GOOGLE_APPLICATION_CREDENTIALS:-}"
+    [[ -z "$gac" ]] && return 0
+
+    local key_project=""
+    if [[ -f "$gac" ]] && command -v python3 &>/dev/null; then
+        key_project=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("project_id",""))' "$gac" 2>/dev/null || true)
+    fi
+
+    local expected="${GCP_PROJECT_ID:-${GCP_DEFAULT_PROJECT:-}}"
+    if [[ -n "$expected" && -n "$key_project" && "$key_project" == "$expected" ]]; then
+        return 0
+    fi
+
+    echo "[!] Unsetting GOOGLE_APPLICATION_CREDENTIALS (overrides ADC/impersonation)." >&2
+    if [[ -n "$key_project" ]]; then
+        echo "    key project=[${key_project}] expected=[${expected:-unset}] file=[${gac}]" >&2
+    else
+        echo "    file=[${gac}] (missing, unreadable, or no project_id)" >&2
+    fi
+    unset GOOGLE_APPLICATION_CREDENTIALS
+}
+
+# Run on shell source so new sessions cannot inherit a dead key export.
+_gcp_clear_stale_keyfile_creds
+
+# ====================================================================================
 # gcp_authenticate - Fully Aligned GCP CLI & ADC Authentication
 # Sourced via environment variables in ~/.bash_environment.sh
 # ====================================================================================
@@ -23,6 +55,7 @@ gcp_authenticate() {
     echo "[+] Initializing GCP authentication matrix..."
 
     # 2. Clear file overrides that bypass ADC lookup
+    _gcp_clear_stale_keyfile_creds
     unset GOOGLE_APPLICATION_CREDENTIALS GCP_DEFAULT_PROJECT
 
     # 3. Verify primary gcloud human user identity (Required for CLI SA impersonation)
@@ -164,6 +197,11 @@ gcp_auth_status() {
     echo "Account : ${account:-none}"
     echo "Project : ${project:-none}"
     echo "SA      : ${sa:-(none)}"
+    if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
+        echo -e "GAC     : ${ORANGE}${GOOGLE_APPLICATION_CREDENTIALS}${NC} (overrides ADC — unset unless intentional)"
+    else
+        echo "GAC     : (unset — using ADC/impersonation)"
+    fi
     if [[ $token_ok -eq 1 ]]; then
         echo -e "User token: ${GREEN}valid${NC}"
     else

@@ -75,7 +75,7 @@ listlogs() {
 ###===============================================================================================###
 
 ### Using staging
-export VASTC_GCP=staging-gcp-clouddev-itdesk124-ctx
+export VASTC_GCP=staging-gcp-vast-on-cloud-ctx
 export VASTC_AWS=staging-aws-600627351840-ctx
 
 vc_use() {
