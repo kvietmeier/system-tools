@@ -26,6 +26,8 @@ print_tfvars() {
     echo "VASTDATA_TENANT: ${VASTDATA_TENANT}"
     echo "-----------------------------------"
     # Terraform Input Variable Overrides (Mapped via TF_VAR_ prefix)
+    echo "TF_VAR_vast_host: ${TF_VAR_vast_host}"
+    echo "TF_VAR_vast_port: ${TF_VAR_vast_port}"
     echo "TF_VAR_vast_username: ${TF_VAR_vast_username}"
     echo "TF_VAR_vast_password: ${TF_VAR_vast_password}"
     echo "TF_VAR_vast_skip_ssl_verify: ${TF_VAR_vast_skip_ssl_verify}"
