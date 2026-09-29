@@ -5,7 +5,7 @@
 #    License: Apache 2.0
 ###===============================================================================================###
 
-unalias vchelp1 vchelp2 vcls vc_ctx vcstat vclogin vccreategcp vccreateaws vcdestroy clusterhelp vcuse vcstatus vcauth 2>/dev/null || true
+unalias vchelp1 vchelp2 vcls vc_ctx vcstat vclogin vccreate vccreategcp vccreateaws vcdestroy clusterhelp vcuse vcstatus vcauth 2>/dev/null || true
 
 # Explicitly switch context in ~/.vast/config.yaml
 # Resolves shortcuts from POLARIS_CONTEXTS (defined in ~/.bash_environment.sh),
@@ -317,6 +317,36 @@ install_aws_cluster() {
         --skip-checker
 }
 
+# Create from Polaris pending deployment by --select name only (no provider flags).
+#   vccreate <polaris-select-name>        # print command only
+#   vccreate <polaris-select-name> -x     # execute
+install_select_cluster() {
+    _vc_parse_create_args "$@"
+    local parse_rc=$?
+    if [[ $parse_rc -eq 2 ]]; then
+        echo "Usage: vccreate <polaris-select-name> [-x|--execute]"
+        echo "  Default is dry-run; pass -x to execute."
+        return 0
+    elif [[ $parse_rc -ne 0 ]]; then
+        return 1
+    fi
+
+    local cluster_name="${_VC_CREATE_NAME:-}"
+    local execute="$_VC_CREATE_EXECUTE"
+    if [[ -z "$cluster_name" ]]; then
+        echo "[-] Error: missing polaris-select-name" >&2
+        echo "    Usage: vccreate <polaris-select-name> [-x]" >&2
+        return 1
+    fi
+
+    echo "Cluster create: $cluster_name"
+    _vc_run_or_print "$execute" \
+        vastcloud cluster create \
+        --select "$cluster_name" \
+        --skip-checker \
+        --skip-preflight
+}
+
 if command -v vastcloud >/dev/null 2>&1; then
     alias vchelp1='vastcloud --help'
     alias vchelp2='vastcloud cluster create --help'
@@ -327,10 +357,13 @@ if command -v vastcloud >/dev/null 2>&1; then
     alias vcstatus='vast_status'
     alias vcauth='vc_auth_status'
     alias vclogin='vc_login'
+    alias vccreate='install_select_cluster'
     alias vccreategcp='install_gcp_cluster'
     alias vccreateaws='install_aws_cluster'
     alias vcdestroy='vastcloud cluster delete --select'
     alias clusterhelp='echo "Sticky env once per lab; name changes per run:
+  vccreate <polaris-select-name>          # dry-run (print command)
+  vccreate <polaris-select-name> -x       # execute
   vccreategcp <polaris-select-name>       # dry-run (print command)
   vccreategcp <polaris-select-name> -x    # execute
   vccreateaws <polaris-select-name> [-x]
