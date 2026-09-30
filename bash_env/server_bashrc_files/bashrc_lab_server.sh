@@ -3,7 +3,7 @@
 #
 # Purpose:
 #   Quick interactive shell setup on a new Ubuntu, RHEL/CentOS, or cloud VM:
-#     - Cloud-aware prompt + terminal title (GCP / AWS / Azure / WSL / OnPrem)
+#     - Cloud-aware prompt + terminal title (GCP / AWS / Azure / WSL / LAB / OnPrem)
 #     - Shared history sync, vi editing, sensible aliases
 #     - Optional ~/.bashrc.d fragments and ~/.bash_aliases
 #
@@ -94,6 +94,7 @@ detect_cloud() {
             "Google Compute Engine") echo "GCP"; return ;;
             "Virtual Machine")       echo "Azure"; return ;;
             "HVM domU"|*"Amazon EC2"*) echo "AWS"; return ;;
+            *VMware*)                echo "LAB"; return ;;
         esac
     fi
 
@@ -103,6 +104,7 @@ detect_cloud() {
             *Google*)    echo "GCP"; return ;;
             *Microsoft*) echo "Azure"; return ;;
             *Amazon*)    echo "AWS"; return ;;
+            *VMware*)    echo "LAB"; return ;;
         esac
     fi
 
