@@ -15,25 +15,17 @@
 
 #===============================================================================#
 # Function: print_tfvars
-# Purpose: Print the current values of Terraform variables related to VAST Data
+# Purpose: Print common Terraform / provider-related env vars (if set)
 #===============================================================================#
 print_tfvars() {
-    echo "Printing Terraform variable values:"
+    echo "Printing Terraform-related env values (empty if unset):"
     echo "-----------------------------------"
-    # Native Provider Fallbacks (Automatically read by the vastdata provider)
-    echo "VASTDATA_HOST: ${VASTDATA_HOST}"
-    echo "VASTDATA_PORT: ${VASTDATA_PORT}"
-    echo "VASTDATA_TENANT: ${VASTDATA_TENANT}"
+    echo "TF_VAR_vast_host: ${TF_VAR_vast_host:-}"
+    echo "TF_VAR_vast_port: ${TF_VAR_vast_port:-}"
+    echo "TF_VAR_vast_username: ${TF_VAR_vast_username:-}"
+    echo "TF_VAR_vast_skip_ssl_verify: ${TF_VAR_vast_skip_ssl_verify:-}"
     echo "-----------------------------------"
-    # Terraform Input Variable Overrides (Mapped via TF_VAR_ prefix)
-    echo "TF_VAR_vast_host: ${TF_VAR_vast_host}"
-    echo "TF_VAR_vast_port: ${TF_VAR_vast_port}"
-    echo "TF_VAR_vast_username: ${TF_VAR_vast_username}"
-    echo "TF_VAR_vast_password: ${TF_VAR_vast_password}"
-    echo "TF_VAR_vast_skip_ssl_verify: ${TF_VAR_vast_skip_ssl_verify}"
-    echo "TF_VAR_vast_version_validation_mode: ${TF_VAR_vast_version_validation_mode}"
-    echo "TF_VAR_vast_api_token: ${TF_VAR_vast_api_token}"
-    echo "-----------------------------------"
+    echo "(Passwords/tokens omitted — check ~/.bash_environment.sh locally)"
 }   
 
 
@@ -210,19 +202,13 @@ test_workspace_edge() {
 
 #==============================================#
 # Function: check_cloud_auth (alias: cloudauth)
-# Purpose: One-shot identity check across Polaris + Azure/GCP/AWS
+# Purpose: One-shot identity check across Azure/GCP/AWS
 #==============================================#
 check_cloud_auth() {
     local BLUE='\033[0;34m'
     local NC='\033[0m'
 
-    echo -e "${BLUE}--- Cloud Identity & Polaris Status ---${NC}"
-
-    if declare -F vc_auth_status &>/dev/null; then
-        vc_auth_status --line
-    else
-        echo "Polaris:  (vc helpers not loaded)"
-    fi
+    echo -e "${BLUE}--- Cloud Identity Status ---${NC}"
 
     if declare -F az_auth_status &>/dev/null; then
         az_auth_status --line

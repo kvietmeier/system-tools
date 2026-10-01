@@ -10,8 +10,8 @@
 
 # ====================================================================================
 # Stale key-file guard
-# GOOGLE_APPLICATION_CREDENTIALS wins over ADC/impersonation for Go SDKs (vastcloud,
-# terraform). A retired project key (e.g. clouddev-itdesk124) causes opaque 403s.
+# GOOGLE_APPLICATION_CREDENTIALS wins over ADC/impersonation for Go SDKs /
+# terraform. A retired project key (e.g. clouddev-itdesk124) causes opaque 403s.
 # Darwin auth is ADC + GCP_SA_EMAIL impersonation — key files must not stick around.
 # ====================================================================================
 _gcp_clear_stale_keyfile_creds() {
@@ -86,7 +86,7 @@ gcp_authenticate() {
     # Explicitly bind the active user account to gcloud config
     gcloud config set account "${ACTIVE_ACCOUNT}" &>/dev/null
 
-    # 4. Check and generate Application Default Credentials (ADC) for Go SDKs & vastcloud
+    # 4. Check and generate Application Default Credentials (ADC) for Go SDKs / CLIs
     if ! gcloud auth application-default print-access-token &>/dev/null; then
         echo "[!] ADC token missing or expired. Initializing ADC with SA impersonation..."
         if ! gcloud auth application-default login --impersonate-service-account="${GCP_SA_EMAIL}"; then
@@ -101,27 +101,6 @@ gcp_authenticate() {
     # 5. Target project workspace and apply gcloud CLI impersonation
     gcloud config set project "${GCP_PROJECT_ID}" &>/dev/null
     gcloud config set auth/impersonate_service_account "${GCP_SA_EMAIL}" &>/dev/null
-
-    # 6. Synchronize VAST Polaris context if vastcloud binary exists
-    # GCP uses one shared Polaris context (many projects underneath) — resolve via
-    # POLARIS_CONTEXTS shortcuts from ~/.bash_environment.sh (gcp, then gcpstage).
-    if command -v vastcloud >/dev/null 2>&1; then
-        local target_ctx=""
-        if declare -p POLARIS_CONTEXTS &>/dev/null; then
-            target_ctx="${POLARIS_CONTEXTS[gcp]:-${POLARIS_CONTEXTS[gcpstage]:-}}"
-        fi
-        if [[ -n "$target_ctx" ]]; then
-            echo "[+] Syncing VAST Polaris context: $target_ctx"
-            if vastcloud config use-context "$target_ctx"; then
-                export VASTC_CONTEXT="$target_ctx"
-                export POLARIS_CONTEXT="$target_ctx"
-            else
-                echo "[-] Warning: Failed to set vastcloud context '$target_ctx'." >&2
-            fi
-        else
-            echo "[-] Warning: No POLARIS_CONTEXTS[gcp|gcpstage] mapping found; Polaris context not synced." >&2
-        fi
-    fi
 
     echo "[+] System Identity Matrix: User [${ACTIVE_ACCOUNT}] active, ADC set, project pinned, and impersonation active."
 

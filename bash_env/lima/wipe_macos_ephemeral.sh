@@ -3,7 +3,7 @@
 # wipe_macos_ephemeral.sh  (run on the Mac host)
 #
 # MacOS Lima VMs (MacOS01, MacOS_Clean, …) are ephemeral bare-node macOS labs:
-#   use once → wipe. Do NOT treat them like durable linux labs (vcdev-env / aws-env).
+#   use once → wipe. Do NOT treat them like durable linux labs (aws-env / gcp-env).
 #
 # Usage:
 #   ./bash_env/lima/wipe_macos_ephemeral.sh              # wipe default names

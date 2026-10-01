@@ -70,60 +70,9 @@ listlogs() {
 }
 
 
-###===============================================================================================###
-#    vastcloud
-###===============================================================================================###
-
-### Using staging
-export VASTC_GCP=staging-gcp-vast-on-cloud-ctx
-export VASTC_AWS=staging-aws-600627351840-ctx
-
-vc_use() {
-    case "$1" in
-        gcp)
-            export VASTC_CONTEXT="$VASTC_GCP"
-            ;;
-        aws)
-            export VASTC_CONTEXT="$VASTC_AWS"
-            ;;
-        *)
-            echo "Usage: vast_use {gcp|aws}"
-            return 1
-            ;;
-    esac
-
-    vastcloud config use-context "$VASTC_CONTEXT"
-    echo "🔹 Active context: $VASTC_CONTEXT"
-}
-
-
-vast_status() {
-    echo "=============================="
-    echo "VASTCloud Status"
-    echo "=============================="
-
-    echo ""
-    echo "🔹 Context:"
-    vastcloud config current-context 2>/dev/null || echo "  (no context available)"
-
-    echo ""
-    echo "🔹 Auth Status:"
-    vastcloud auth status 2>/dev/null || echo "  (not authenticated)"
-
-    echo ""
-    echo "=============================="
-}
-
-
-alias vcls='vastcloud cluster list'
-alias vcauth='vastcloud auth status'
-alias vcuse='vc_use'
-alias vcstatus='vast_status'
-
-
 #==============================================#
 # Function: check_cloud_auth
-# Purpose: Quick identity check across Polaris/vastcloud + Azure/GCP/AWS CLIs
+# Purpose: Quick identity check across Azure/GCP/AWS CLIs
 #==============================================#
 check_cloud_auth() {
     local GREEN='\033[0;32m'
@@ -132,22 +81,7 @@ check_cloud_auth() {
     local RED='\033[0;31m'
     local NC='\033[0m'
 
-    echo -e "${BLUE}--- Cloud Identity & Polaris Status ---${NC}"
-
-    echo -ne "Polaris:  "
-    if command -v vastcloud &> /dev/null; then
-        local VC_CTX VC_AUTH VC_USER
-        VC_CTX=$(vastcloud config current-context 2>/dev/null)
-        VC_AUTH=$(vastcloud auth status 2>/dev/null | head -1)
-        if [[ "$VC_AUTH" == *"Authenticated as"* ]]; then
-            VC_USER=$(echo "$VC_AUTH" | sed -E 's/.*Authenticated as[[:space:]]+//')
-            echo -e "${GREEN}${VC_USER}${NC} (ctx: ${VC_CTX:-none})"
-        else
-            echo -e "${ORANGE}Not logged in (vastcloud login)${NC}"
-        fi
-    else
-        echo -e "${RED}CLI not found${NC}"
-    fi
+    echo -e "${BLUE}--- Cloud Identity Status ---${NC}"
 
     echo -ne "Azure:    "
     if command -v az &> /dev/null; then

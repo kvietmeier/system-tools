@@ -1,15 +1,14 @@
 ###=================================================================================================###
-### AWS Authentication Helpers & VAST Polaris Context Sync
-### File: .bashrc.d/11-functions-aws.sh
-### Purpose: Simplify AWS SSO login via dynamic profile selection and sync VAST Polaris context
+### AWS Authentication Helpers
+### File: .bashrc.d/12-aws-functions.sh
+### Purpose: Simplify AWS SSO login via dynamic profile selection
 ### License: Apache 2.0
 ###=================================================================================================###
 
 ###-------------------------------------------------------------------------------------------------###
-### 1. Core Login & State Synchronization
+### 1. Core Login
 ###-------------------------------------------------------------------------------------------------###
 
-# Core Login Wrapper with Bidirectional Polaris Sync
 awslogin() {
     local input="${1:-${AWS_PROFILE:-}}"
     
@@ -29,29 +28,11 @@ awslogin() {
         echo "> Executing: No shortcut matched. Exporting raw AWS_PROFILE=$AWS_PROFILE"
     fi
 
-    # 1. Authenticate to AWS SSO
     echo "> Executing: aws sso login --profile $AWS_PROFILE"
     if aws sso login --profile "$AWS_PROFILE"; then
-        
-        # 2. If AWS auth succeeds, sync the VAST Polaris context
-        if [[ -n "${AWS_TO_VAST_CTX[$AWS_PROFILE]:-}" ]]; then
-            local target_vast_ctx="${AWS_TO_VAST_CTX[$AWS_PROFILE]}"
-            echo "> Executing: vastcloud config use-context $target_vast_ctx"
-            
-            if command -v vastcloud >/dev/null 2>&1; then
-                if vastcloud config use-context "$target_vast_ctx" >/dev/null 2>&1; then
-                    export POLARIS_CONTEXT="$target_vast_ctx"
-                    export VASTC_CONTEXT="$target_vast_ctx"
-                    echo "[VAST] Polaris context synced: $VASTC_CONTEXT"
-                else
-                    echo "> [ERROR] Failed to set vastcloud context." >&2
-                fi
-            fi
-        else
-            echo "[VAST] Warning: No mapped VAST context found for AWS profile '$AWS_PROFILE'"
-        fi
+        echo "[+] AWS SSO login succeeded (profile: $AWS_PROFILE)"
     else
-        echo "> [ERROR] AWS SSO login failed. VAST context not synced." >&2
+        echo "> [ERROR] AWS SSO login failed." >&2
         return 1
     fi
 }
@@ -95,7 +76,6 @@ aws_auth_status() {
     echo "               AWS AUTHENTICATION STATUS                "
     echo "========================================================"
     echo "Profile : ${AWS_PROFILE:-none}"
-    echo "VAST ctx: ${VASTC_CONTEXT:-${POLARIS_CONTEXT:-none}}"
     if [[ $ok -eq 0 && -n "$arn" ]]; then
         echo -e "Identity: ${GREEN}${arn}${NC}"
         aws sts get-caller-identity --query '{Account:Account, Arn:Arn}' --output table 2>/dev/null
