@@ -7,11 +7,9 @@ Thin bootstrap helpers only — not a substitute for Ansible (fleet config) or `
 
 | Path | Purpose |
 |------|---------|
-| `bash_env/` | Modular Bash env (`bashrc.d.darwin` / `bashrc.d.linux`), sync scripts, lab VM drop-in bashrcs |
+| `bash_env/` | Modular Bash env (`bashrc.d.darwin` / `bashrc.d.linux`), helpers, lab VM drop-in bashrcs |
 | `powershell/` | Profile, Windows/WSL workstation setup, AD helpers. Cloud PS lives in `cloud-tools` |
 | `*.sh` (repo root) | One-shot host helpers: users, hosts file, initial config, WSL XDG, etc. |
-
-Edit live config under `~/.bashrc.d`, then run `bash_env/update_repo.sh` to copy back into the repo (`--all` also syncs `common/`).
 
 More detail for the Bash stack: [`bash_env/README.md`](bash_env/README.md).
 

@@ -76,16 +76,6 @@ This stack is **Bash-first**. Do not source `bashrc.d.*` wholesale from `~/.zshr
 Suggested: keep Bash modules as source of truth for cloud functions; thin `~/.zshrc` that sources helpers only (skip `02` / bash completion); zsh-native prompt/history.
 
 ---
-### How it works — WARNING: can overwrite your existing environment
----
-
-1. **`git_setup.sh` / `git_clone.sh`**: Bootstrap Git and clone repos on a new machine.
-2. **`git_sync.sh`**: Pull a list of local repos (road-trip laptop update).
-3. **`update_repo.sh`**: Copy `~/.bashrc.d` → `bashrc.d.darwin/` or `bashrc.d.linux/`. Pass **`--all`** to also sync `common/` (scrubs secrets from `bash_environment`, personal info from `gitconfig`).
-4. **`rehydrate_repo.sh`**: Deploy repo files into a new home directory after clone.
-5. **`install_cloud_sdks_universal.sh`**: Install AWS CLI, Azure CLI, gcloud, OCI CLI, Terraform, Asciinema (plus `wslu` on WSL).
-
----
 ### Files
 ---
 
@@ -94,8 +84,9 @@ bash_env/
 │
 ├─ common/               # Shared dotfiles (bashrc, aliases, vimrc, tmux, gitconfig templates)
 ├─ install_*.sh          # Lab base + cloud SDK bootstrap
-├─ update_repo.sh        # Sync ~/.bashrc.d → bashrc.d.{darwin|linux}; --all for common/
-├─ rehydrate_repo.sh     # Deploy configs to a new machine
+├─ update_repo.sh        # Optional helper scripts (see script headers)
+├─ rehydrate_repo.sh
+├─ git_setup.sh / git_clone.sh / git_sync.sh
 │
 ├─ server_bashrc_files/  # Drop-in ~/.bashrc for cloud/lab VMs
 ├─ ssh/                  # SSH client config templates
