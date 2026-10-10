@@ -17,6 +17,7 @@ Some features:
 Files:  
 
 - AzureFunctions.ps1
+- BrowserFunctions.ps1 — `pchrome` / `pedge` / `chrome_isol` / `edge_isol`
 - CommandAliases.ps1
 - GCPFunctions.ps1
 - K8SAndGit.ps1

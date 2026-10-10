@@ -86,6 +86,7 @@ $OneDriveVASTPath = Join-Path $UserProfile "OneDrive - Vast Data\Documents\Windo
 $FunctionFiles = @(
     "UserFunctions.ps1",
     "LinuxFunctions.ps1",
+    "BrowserFunctions.ps1",
     "GCPFunctions.ps1",
     "AWSFunctions.ps1",
     "AzureFunctions.ps1",

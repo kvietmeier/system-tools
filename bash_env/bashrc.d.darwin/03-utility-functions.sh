@@ -154,19 +154,20 @@ test_workspace_chrome() {
     echo "[+] Initializing pristine, throwaway Chrome test environment..."
     echo "[+] Profile Path: ${tmp_dir}"
 
-    # Execute Chrome binary directly (blocking call) to bind lifecycle to shell
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-        --user-data-dir="${tmp_dir}" \
-        --no-first-run \
-        --no-default-browser-check \
-        --disable-sync \
-        --process-per-site \
-        "${target_url}" &>/dev/null
-
-    # Atomic purge upon browser termination
-    echo "[+] Terminating session and nuking temporary state..."
-    rm -rf "${tmp_dir}"
-    echo "[+] Cleanup complete. Zero-drift maintained."
+    # Background a waiter subshell: shell returns immediately; profile is
+    # nuked when that Chrome process exits.
+    (
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+            --user-data-dir="${tmp_dir}" \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-sync \
+            --process-per-site \
+            "${target_url}" &>/dev/null
+        rm -rf "${tmp_dir}"
+    ) &
+    disown $!
+    echo "[+] Chrome launched in background (cleanup on exit)."
 }
 
 # Generic throwaway Microsoft Edge instance with deterministic window geometry
@@ -182,21 +183,23 @@ test_workspace_edge() {
     echo "[+] Initializing pristine, throwaway Edge test environment..."
     echo "[+] Profile Path: ${tmp_dir}"
 
-    # Execute Edge binary directly to preserve shell process binding.
-    # Appends explicit 1195x1113 geometry and M5 memory-conservation flags.
-    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
-        --user-data-dir="${tmp_dir}" \
-        --window-size=1195,1113 \
-        --no-first-run \
-        --no-default-browser-check \
-        --disable-sync \
-        --process-per-site \
-        --enable-features=high-efficiency-mode \
-        "${target_url}" &>/dev/null
-
-    echo "[+] Terminating session and nuking temporary state..."
-    rm -rf "${tmp_dir}"
-    echo "[+] Cleanup complete. Zero-drift maintained."
+    # Background a waiter subshell: shell returns immediately; profile is
+    # nuked when that Edge process exits. Geometry + high-efficiency flags
+    # preserved for the M5 footprint.
+    (
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+            --user-data-dir="${tmp_dir}" \
+            --window-size=1195,1113 \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-sync \
+            --process-per-site \
+            --enable-features=high-efficiency-mode \
+            "${target_url}" &>/dev/null
+        rm -rf "${tmp_dir}"
+    ) &
+    disown $!
+    echo "[+] Edge launched in background (cleanup on exit)."
 }
 
 
