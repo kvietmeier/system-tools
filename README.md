@@ -94,6 +94,8 @@ fi
 
 ### Isolated browsers
 
+Separate Chrome/Edge profiles (personal + ephemeral). Shareable write-up: [`docs/browser-isolation.md`](docs/browser-isolation.md).
+
 * macOS (`bashrc.d`): `pedge` / `pchrome` — dedicated personal profiles; `chrome_isol` / `edge_isol` — ephemeral TEMP profiles (background launch, purge on exit)
 * Windows (`powershell/Profile/BrowserFunctions.ps1`): same aliases — personal under `%LOCALAPPDATA%`, ephemeral under `%TEMP%` with detached cleanup waiter
 
